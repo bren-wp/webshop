@@ -1,0 +1,397 @@
+<?php
+/**
+ * Fiscalizer — fiskalizacija narudžbi kroz đurđa API.
+ *
+ * Logika preuzeta iz provjerene produkcijske integracije:
+ *  - AUTO-ASSIGN numeracija: broj računa dodjeljuje đurđa atomarno TEK na uspjeh
+ *    (nema rupa u CIS sekvenci), shop ne drži lokalni counter.
+ *  - Idempotency kroz clientRequestId = shop-{OIB}-order-{id} (stabilan kroz retry-e).
+ *  - 48h zakonski prozor (NN 89/2025): transient greške → pending_retry s exponential
+ *    backoffom; istek prozora → failed_expired + alert vlasniku.
+ *  - PDV svjesnost: firma u PDV sustavu → vatBreakdown grupiran po stopama stavki;
+ *    inače nonTaxableAmount.
+ *
+ * NIKAD ne baca exception — uvijek vraća { success: bool, ... } (webhook mora vratiti 200).
+ */
+
+class Fiscalizer
+{
+    public static function fiscalizeOrder($db, int $orderId): array
+    {
+        $startTs = microtime(true);
+
+        if (Settings::get('fiscal_enabled', '1') !== '1') {
+            return ['success' => false, 'skipped' => true, 'error' => 'Fiskalizacija je isključena.'];
+        }
+
+        $order = $db->fetch('SELECT * FROM orders WHERE id = :id', [':id' => $orderId]);
+        if (!$order) return ['success' => false, 'error' => 'Narudžba nije pronađena.'];
+
+        // Idempotency
+        if ($order['fiscal_status'] === 'fiscalized' && !empty($order['fiscal_jir'])) {
+            return [
+                'success' => true, 'idempotent' => true,
+                'jir' => $order['fiscal_jir'], 'zki' => $order['fiscal_zki'],
+                'receiptNumber' => $order['fiscal_receipt_number'], 'mode' => $order['fiscal_mode'],
+            ];
+        }
+        if ($order['payment_status'] !== 'paid') {
+            return ['success' => false, 'error' => "Narudžba nije plaćena (payment_status={$order['payment_status']})."];
+        }
+
+        $client = DjurdjaClient::fromSettings();
+        if (!$client) {
+            $err = 'Đurđa API ključ nije konfiguriran (admin → Đurđa veza).';
+            self::markFailed($db, $orderId, $err);
+            return ['success' => false, 'error' => $err];
+        }
+
+        $mode = self::determineMode($client, $order['payment_method']);
+        $company = Djurdja::company();
+        $oib = $company['companyOib'] ?? null;
+
+        $clientRequestId = 'shop-' . preg_replace('/[^A-Za-z0-9]/', '', $oib ?? 'unknown') . '-order-' . $orderId;
+        $payload = self::buildPayload($db, $order, $company);
+        $payload['clientRequestId'] = $clientRequestId;
+
+        try {
+            $result = $client->fiscalize($payload);
+        } catch (DjurdjaApiException $e) {
+            self::logEvent($db, $orderId, 'error', [
+                'mode' => $mode, 'response_status' => $e->httpStatus,
+                'error_code' => $e->apiErrorCode, 'error_message' => $e->getMessage(),
+                'request_id' => $e->requestId,
+                'raw_response' => $e->responseBody ? json_encode($e->responseBody) : null,
+                'duration_ms' => (int) ((microtime(true) - $startTs) * 1000),
+            ]);
+
+            $adminMsg = self::friendlyError($e);
+
+            if (self::classifyError($e) === 'transient') {
+                self::markPendingRetry($db, $orderId, $adminMsg, $e->apiErrorCode, $mode);
+                return [
+                    'success' => false, 'pending_retry' => true, 'error' => $adminMsg,
+                    'apiErrorCode' => $e->apiErrorCode,
+                    'message' => 'Đurđa privremeno nedostupna — račun će biti automatski naknadno fiskaliziran (zakonski rok 48 h).',
+                ];
+            }
+            self::markFailed($db, $orderId, $adminMsg, $e->apiErrorCode);
+            return ['success' => false, 'error' => $adminMsg, 'apiErrorCode' => $e->apiErrorCode];
+        } catch (Throwable $e) {
+            $msg = 'Neočekivana greška: ' . $e->getMessage();
+            self::markPendingRetry($db, $orderId, $msg, 'internal', $mode);
+            error_log('[Fiscalizer] ' . $e->getMessage());
+            return ['success' => false, 'pending_retry' => true, 'error' => $msg];
+        }
+
+        // fiscalized_at = vrijeme kad je CIS prihvatio (pravna važnost), format "dd.MM.yyyyTHH:mm:ss"
+        $cisTime = $result['fiscalizedAt'] ?? null;
+        $mysqlDate = null;
+        if ($cisTime && preg_match('/^(\d{2})\.(\d{2})\.(\d{4})T(\d{2}):(\d{2}):(\d{2})$/', $cisTime, $m)) {
+            $mysqlDate = "{$m[3]}-{$m[2]}-{$m[1]} {$m[4]}:{$m[5]}:{$m[6]}";
+        }
+        if (!$mysqlDate) $mysqlDate = date('Y-m-d H:i:s');
+
+        $receiptNumber = (string) ($result['receiptNumber'] ?? '');
+        if ($receiptNumber === '') {
+            self::markFailed($db, $orderId, 'Đurđa odgovor ne sadrži receiptNumber.', 'invalid_response');
+            return ['success' => false, 'error' => 'Đurđa odgovor ne sadrži receiptNumber.'];
+        }
+
+        $db->update('orders', [
+            'fiscal_status' => 'fiscalized',
+            'fiscal_mode'   => $mode,
+            'fiscal_receipt_number' => $receiptNumber,
+            'fiscal_jir'    => $result['jir'] ?? null,
+            'fiscal_zki'    => $result['zki'] ?? null,
+            'fiscal_qr'     => $result['qrCode'] ?? null,
+            'fiscalized_at' => $mysqlDate,
+            'fiscal_error'  => null,
+            'fiscal_next_retry_at'   => null,
+            'fiscal_last_error_code' => null,
+        ], 'id = :id', [':id' => $orderId]);
+        $db->query('UPDATE orders SET fiscal_attempts = fiscal_attempts + 1,
+                    fiscal_first_attempt_at = COALESCE(fiscal_first_attempt_at, NOW()) WHERE id = :id', [':id' => $orderId]);
+
+        self::logEvent($db, $orderId, 'fiscalize', [
+            'mode' => $mode, 'receipt_number' => $receiptNumber,
+            'jir' => $result['jir'] ?? null, 'zki' => $result['zki'] ?? null,
+            'request_id' => $result['requestId'] ?? null, 'response_status' => 200,
+            'raw_response' => json_encode($result),
+            'duration_ms' => (int) ((microtime(true) - $startTs) * 1000),
+        ]);
+
+        return [
+            'success' => true,
+            'jir' => $result['jir'] ?? null, 'zki' => $result['zki'] ?? null,
+            'receiptNumber' => $receiptNumber, 'mode' => $mode,
+            'idempotent' => !empty($result['idempotent']),
+        ];
+    }
+
+    public static function stornoOrder($db, int $orderId, string $reason = 'Povrat'): array
+    {
+        $startTs = microtime(true);
+        $order = $db->fetch('SELECT * FROM orders WHERE id = :id', [':id' => $orderId]);
+        if (!$order) return ['success' => false, 'error' => 'Narudžba nije pronađena.'];
+        if ($order['fiscal_status'] !== 'fiscalized') {
+            return ['success' => false, 'error' => 'Narudžba nije fiskalizirana.'];
+        }
+        $client = DjurdjaClient::fromSettings();
+        if (!$client) return ['success' => false, 'error' => 'Đurđa API ključ nije konfiguriran.'];
+
+        $company = Djurdja::company();
+        $stornoClientRequestId = 'storno-shop-'
+            . preg_replace('/[^A-Za-z0-9]/', '', $company['companyOib'] ?? 'unknown') . '-order-' . $orderId;
+
+        $payload = [
+            'businessSpace'   => Settings::get('business_space', 'WEBSHOP'),
+            'cashRegister'    => Settings::get('cash_register', '1'),
+            'receiptNumber'   => $order['fiscal_receipt_number'], // identificira ORIGINALNI račun
+            'clientRequestId' => $stornoClientRequestId,
+            'reason'          => $reason,
+        ];
+
+        try {
+            $result = $client->storno($payload);
+        } catch (DjurdjaApiException $e) {
+            if ($e->apiErrorCode === 'already_storno') {
+                // Reconcile lokalno stanje — đurđa kaže da je već stornirano
+                $det = $e->responseBody['error']['details'] ?? [];
+                $db->update('orders', [
+                    'fiscal_status' => 'stornoed',
+                    'fiscal_storno_jir' => $det['stornoJir'] ?? $order['fiscal_storno_jir'],
+                    'fiscal_storno_receipt_number' => $det['stornoReceiptNumber'] ?? $order['fiscal_storno_receipt_number'],
+                ], 'id = :id', [':id' => $orderId]);
+                return ['success' => true, 'idempotent' => true];
+            }
+            self::logEvent($db, $orderId, 'error', [
+                'mode' => $order['fiscal_mode'], 'response_status' => $e->httpStatus,
+                'error_code' => $e->apiErrorCode, 'error_message' => $e->getMessage(),
+                'duration_ms' => (int) ((microtime(true) - $startTs) * 1000),
+            ]);
+            return ['success' => false, 'error' => $e->getMessage(), 'apiErrorCode' => $e->apiErrorCode];
+        }
+
+        $stornoNumber = (string) ($result['stornoReceiptNumber'] ?? '');
+        if ($stornoNumber === '') {
+            return ['success' => false, 'error' => 'Đurđa odgovor ne sadrži stornoReceiptNumber.'];
+        }
+        $db->update('orders', [
+            'fiscal_status' => 'stornoed',
+            'fiscal_storno_jir' => $result['stornoJir'] ?? null,
+            'fiscal_storno_receipt_number' => $stornoNumber,
+        ], 'id = :id', [':id' => $orderId]);
+
+        self::logEvent($db, $orderId, 'storno', [
+            'mode' => $order['fiscal_mode'], 'receipt_number' => $stornoNumber,
+            'jir' => $result['stornoJir'] ?? null, 'response_status' => 200,
+            'raw_response' => json_encode($result),
+            'duration_ms' => (int) ((microtime(true) - $startTs) * 1000),
+        ]);
+        return ['success' => true, 'stornoJir' => $result['stornoJir'] ?? null, 'stornoReceiptNumber' => $stornoNumber];
+    }
+
+    /** Cron: pokušaj ponovno sve narudžbe u pending_retry kojima je vrijeme. */
+    public static function retryDue($db, int $limit = 10): array
+    {
+        $due = $db->fetchAll(
+            "SELECT id FROM orders WHERE fiscal_status = 'pending_retry'
+             AND fiscal_next_retry_at IS NOT NULL AND fiscal_next_retry_at <= NOW()
+             ORDER BY fiscal_next_retry_at ASC LIMIT " . (int) $limit
+        );
+        $results = [];
+        foreach ($due as $row) {
+            $results[(int) $row['id']] = self::fiscalizeOrder($db, (int) $row['id']);
+        }
+        return $results;
+    }
+
+    // ==================================================================
+    // Helpers
+    // ==================================================================
+
+    private static function determineMode(DjurdjaClient $client, string $paymentMethod): string
+    {
+        if (Settings::get('force_test_mode') === '1') return 'test';
+        if ($client->mode() === 'test') return 'test';
+        try {
+            if ((new PaymentManager())->isSandbox($paymentMethod)) return 'test';
+        } catch (Throwable $e) {
+        }
+        return 'live';
+    }
+
+    /**
+     * Payload — PDV razrada po stopama stavki (uklj. dostavu/naknadu sa stopom 25%),
+     * ili nonTaxableAmount ako firma nije u sustavu PDV-a.
+     */
+    private static function buildPayload($db, array $order, array $company): array
+    {
+        $totalAmount = (float) $order['total'];
+        $payload = [
+            'businessSpace' => Settings::get('business_space', 'WEBSHOP'),
+            'cashRegister'  => Settings::get('cash_register', '1'),
+            'totalAmount'   => $totalAmount,
+            'currency'      => 'EUR',
+            'paymentMethod' => self::finaCode($order['payment_method']),
+            'note'          => 'Narudžba ' . $order['order_number'] . ' (web shop)',
+        ];
+
+        if (!empty($company['inVatSystem'])) {
+            $byRate = [];
+            foreach ($db->fetchAll('SELECT vat_rate, total FROM order_items WHERE order_id = :o', [':o' => $order['id']]) as $it) {
+                $rate = round((float) $it['vat_rate'], 2);
+                $byRate[(string) $rate] = ($byRate[(string) $rate] ?? 0) + (float) $it['total'];
+            }
+            $extra = (float) $order['shipping_cost'] + (float) $order['payment_fee'];
+            if ($extra > 0) {
+                $rate = round((float) Settings::get('shipping_vat_rate', '25'), 2);
+                $byRate[(string) $rate] = ($byRate[(string) $rate] ?? 0) + $extra;
+            }
+            $breakdown = [];
+            foreach ($byRate as $rateStr => $gross) {
+                $rate = (float) $rateStr;
+                $base = $rate > 0 ? round($gross / (1 + $rate / 100), 2) : round($gross, 2);
+                $amount = round($gross - $base, 2);
+                $breakdown[] = ['rate' => $rate, 'base' => $base, 'amount' => $amount];
+            }
+            $payload['vatBreakdown'] = $breakdown;
+        } else {
+            $payload['vatBreakdown'] = [];
+            $payload['nonTaxableAmount'] = $totalAmount;
+        }
+        return $payload;
+    }
+
+    /** FINA kod načina plaćanja: G gotovina, K kartica, T transakcijski račun, O ostalo. */
+    private static function finaCode(string $method): string
+    {
+        $mapping = Settings::getJson('fiscal_payment_mapping');
+        if (isset($mapping[$method]) && in_array($mapping[$method], ['G', 'K', 'T', 'C', 'O'], true)) {
+            return $mapping[$method];
+        }
+        switch ($method) {
+            case 'cod':           return 'G';
+            case 'stripe':        return 'K';
+            case 'bank_transfer': return 'T';
+            default:              return 'O';
+        }
+    }
+
+    private static function friendlyError(DjurdjaApiException $e): string
+    {
+        switch ($e->apiErrorCode) {
+            case 'ip_not_allowed':
+                $ip = $e->responseBody['error']['clientIp'] ?? '?';
+                return "Đurđa je odbila zahtjev s IP-a $ip (nije na IP listi ključa). U MojaĐurđa → API pristup dodajte $ip u whitelist.";
+            case 'vat_mismatch':
+                return 'PDV status u đurđi ne odgovara podacima shopa. Otvorite admin → Đurđa veza → Osvježi podatke.';
+            case 'plan_limit_reached':
+                return 'Mjesečna kvota dokumenata u đurđi je potrošena. Nadogradite paket na mojadjurdja.com da nastavite prodavati.';
+            case 'certificate_missing':
+                return 'U đurđi nije uploadan FINA certifikat — bez njega nema fiskalizacije.';
+            default:
+                return $e->getMessage();
+        }
+    }
+
+    private static function classifyError(DjurdjaApiException $e): string
+    {
+        if ($e->httpStatus === 0) return 'transient';
+        if ($e->httpStatus >= 500) return 'transient';
+        if ($e->httpStatus === 429) return 'transient';
+        if (in_array($e->apiErrorCode, ['cis_unreachable', 'cis_timeout', 'fiscalization_failed', 'rate_limited'], true)) {
+            return 'transient';
+        }
+        return 'permanent';
+    }
+
+    private static function markFailed($db, int $orderId, string $error, ?string $errorCode = null): void
+    {
+        $db->update('orders', [
+            'fiscal_status' => 'failed',
+            'fiscal_error'  => mb_substr($error, 0, 255),
+            'fiscal_last_error_code' => $errorCode ? substr($errorCode, 0, 64) : null,
+            'fiscal_next_retry_at'   => null,
+        ], 'id = :id', [':id' => $orderId]);
+        $db->query('UPDATE orders SET fiscal_attempts = fiscal_attempts + 1,
+                    fiscal_first_attempt_at = COALESCE(fiscal_first_attempt_at, NOW()) WHERE id = :id', [':id' => $orderId]);
+    }
+
+    private static function markPendingRetry($db, int $orderId, string $error, ?string $errorCode, string $mode): void
+    {
+        $db->query('UPDATE orders SET fiscal_attempts = fiscal_attempts + 1,
+                    fiscal_first_attempt_at = COALESCE(fiscal_first_attempt_at, NOW()) WHERE id = :id', [':id' => $orderId]);
+
+        $order = $db->fetch('SELECT fiscal_attempts, fiscal_first_attempt_at FROM orders WHERE id = :id', [':id' => $orderId]);
+        $attempts = (int) ($order['fiscal_attempts'] ?? 1);
+        $firstAttempt = $order['fiscal_first_attempt_at'] ?? date('Y-m-d H:i:s');
+        $expiresAt = strtotime($firstAttempt) + 48 * 3600; // zakonski prozor od PRVOG pokušaja
+
+        if (time() >= $expiresAt) {
+            self::escalateExpired($db, $orderId, $error, $errorCode);
+            return;
+        }
+
+        // Backoff: 1, 2, 5, 15, 30, 60 min, zatim svaka 2 h — cap na rub 48h prozora
+        $backoffMinutes = [1 => 1, 2 => 2, 3 => 5, 4 => 15, 5 => 30, 6 => 60];
+        $minutes = $backoffMinutes[$attempts] ?? 120;
+        $nextTs = time() + $minutes * 60;
+        if ($nextTs >= $expiresAt) $nextTs = max(time() + 30, $expiresAt - 60);
+
+        $db->update('orders', [
+            'fiscal_status' => 'pending_retry',
+            'fiscal_error'  => mb_substr($error, 0, 255),
+            'fiscal_last_error_code' => $errorCode ? substr($errorCode, 0, 64) : null,
+            'fiscal_next_retry_at'   => date('Y-m-d H:i:s', $nextTs),
+            'fiscal_mode'            => $mode,
+        ], 'id = :id', [':id' => $orderId]);
+    }
+
+    private static function escalateExpired($db, int $orderId, string $error, ?string $errorCode): void
+    {
+        $db->update('orders', [
+            'fiscal_status' => 'failed_expired',
+            'fiscal_error'  => mb_substr('48h prozor istekao: ' . $error, 0, 255),
+            'fiscal_last_error_code' => $errorCode ? substr($errorCode, 0, 64) : null,
+            'fiscal_next_retry_at'   => null,
+        ], 'id = :id', [':id' => $orderId]);
+        self::logEvent($db, $orderId, 'expired', ['error_code' => $errorCode, 'error_message' => mb_substr($error, 0, 1000)]);
+
+        try {
+            $order = $db->fetch('SELECT order_number FROM orders WHERE id = :id', [':id' => $orderId]);
+            Mailer::send(
+                s('shop_email', ''),
+                'HITNO: fiskalizacija istekla — ' . ($order['order_number'] ?? "#$orderId"),
+                '<p>Narudžba <strong>' . e($order['order_number'] ?? "#$orderId") . '</strong> nije fiskalizirana unutar zakonskog roka od 48 sati.</p>'
+                . '<p>Greška: ' . e($error) . '</p>'
+                . '<p>Potrebna je ručna intervencija (kontaktirajte knjigovođu ili Poreznu upravu za naknadnu prijavu).</p>'
+            );
+        } catch (Throwable $e) {
+            error_log('[Fiscalizer] alert mail: ' . $e->getMessage());
+        }
+    }
+
+    private static function logEvent($db, int $orderId, string $action, array $data): void
+    {
+        try {
+            $db->insert('fiscal_log', [
+                'order_id'       => $orderId,
+                'action'         => $action,
+                'request_id'     => $data['request_id'] ?? null,
+                'mode'           => $data['mode'] ?? null,
+                'receipt_number' => $data['receipt_number'] ?? null,
+                'jir'            => $data['jir'] ?? null,
+                'zki'            => $data['zki'] ?? null,
+                'response_status'=> $data['response_status'] ?? null,
+                'error_code'     => $data['error_code'] ?? null,
+                'error_message'  => $data['error_message'] ?? null,
+                'raw_response'   => $data['raw_response'] ?? null,
+                'duration_ms'    => $data['duration_ms'] ?? null,
+            ]);
+        } catch (Throwable $e) {
+            error_log('[Fiscalizer::logEvent] ' . $e->getMessage());
+        }
+    }
+}
