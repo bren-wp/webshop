@@ -1,0 +1,18 @@
+# Tajne i lokalna konfiguracija — NIKAD u git
+config/config.php
+install/.lock
+
+# Korisnički sadržaj
+uploads/*
+!uploads/.htaccess
+
+# Logovi
+logs/*
+!logs/.htaccess
+*.log
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
