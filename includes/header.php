@@ -24,7 +24,7 @@ if (!Djurdja::shopAllowed()) {
 $company = Djurdja::company();
 $logoFile = s('logo');
 $navPages = $db->fetchAll('SELECT slug, title FROM pages WHERE is_visible = 1 AND in_nav = 1 ORDER BY sort_order, id');
-$blogActive = Djurdja::customizationAllowed()
+$blogActive = Djurdja::blogActive()
     && (int) $db->fetchColumn('SELECT COUNT(*) FROM blog_posts WHERE is_published = 1') > 0;
 $checkoutOk = Djurdja::checkoutAllowed();
 $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');

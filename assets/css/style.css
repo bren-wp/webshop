@@ -455,3 +455,30 @@ label.f-label { display: block; font-size: 13px; font-weight: 700; margin-bottom
 .ba-content h2 { font-size: 24px; margin: 32px 0 12px; }
 .ba-content img { border-radius: calc(var(--radius) * .7); }
 @media (max-width: 760px) { .blog-hero { grid-template-columns: 1fr; } .blog-hero img { min-height: 200px; } }
+
+/* ── Promo traka (besplatni paket) — diskretna, klizeća, klikabilna ── */
+.promo-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+  display: block; overflow: hidden; height: 38px; text-decoration: none;
+  background: linear-gradient(90deg, #6d28d9, #a855f7 50%, #6d28d9);
+  border-top: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 -4px 16px rgba(109,40,217,.25);
+}
+.promo-bar:hover { opacity: 1; filter: brightness(1.06); }
+.promo-track {
+  display: inline-flex; align-items: center; height: 38px; white-space: nowrap;
+  animation: promo-scroll 36s linear infinite; will-change: transform;
+}
+.promo-bar:hover .promo-track { animation-play-state: paused; }
+.promo-track span { color: #fff; font-size: 13.5px; font-weight: 600; letter-spacing: .2px; padding: 0 48px; }
+.promo-track .pb-dot {
+  display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0;
+  background: #fff; color: #6d28d9; border-radius: 50%; font-size: 12px; font-weight: 900;
+  vertical-align: -4px; margin-right: 6px;
+}
+@keyframes promo-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .promo-track { animation: none; } }
+
+/* ── Hero poravnanje ── */
+.hero-left .hero-inner { margin-left: 0; margin-right: auto; text-align: left; }
+.hero-left .hero-inner p { margin-left: 0; }

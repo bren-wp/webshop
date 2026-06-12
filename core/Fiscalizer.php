@@ -46,6 +46,24 @@ class Fiscalizer
             return ['success' => false, 'error' => $err];
         }
 
+        // Paket se osvježava PRIJE SVAKOG izdavanja računa: ako je kvota u
+        // međuvremenu potrošena (đurđa blagajna dijeli istu kvotu), narudžbu
+        // samo REZERVIRAMO — bez errora, bez trošenja broja — i javimo vlasniku.
+        if (!$client->isMock()) {
+            try {
+                $acc = $client->account();
+                Settings::setJson('djurdja_account', $acc);
+                if (!empty($acc['company'])) Settings::setJson('djurdja_company', $acc['company']);
+                Settings::set('djurdja_last_ok_at', date('Y-m-d H:i:s'));
+                $u = $acc['usage']['DOCUMENT_CREATE'] ?? null;
+                if (is_array($u) && isset($u['limit']) && (int) $u['used'] >= (int) $u['limit']) {
+                    return self::reserveForQuota($db, $orderId, $order);
+                }
+            } catch (Throwable $e) {
+                // best-effort provjera — i bez nje fiscalize uredno vraća 402 (vidi dolje)
+            }
+        }
+
         $mode = self::determineMode($client, $order['payment_method']);
         $company = Djurdja::company();
         $oib = $company['companyOib'] ?? null;
@@ -66,6 +84,12 @@ class Fiscalizer
             ]);
 
             $adminMsg = self::friendlyError($e);
+
+            // Kvota potrošena (402) — đurđa NIJE dodijelila broj (nema rupa u
+            // numeraciji): narudžba se rezervira za kasniju ručnu fiskalizaciju
+            if ($e->apiErrorCode === 'plan_limit_reached') {
+                return self::reserveForQuota($db, $orderId, $order);
+            }
 
             if (self::classifyError($e) === 'transient') {
                 self::markPendingRetry($db, $orderId, $adminMsg, $e->apiErrorCode, $mode);
@@ -305,6 +329,54 @@ class Fiscalizer
             return 'transient';
         }
         return 'permanent';
+    }
+
+    /**
+     * Kvota paketa potrošena → narudžba ostaje REZERVIRANA (fiscal_status='none',
+     * bez retry petlje), vlasnik dobiva mail (jednom po narudžbi) i kasnije je
+     * ručno fiskalizira gumbom "Fiskaliziraj sada" (nakon nadogradnje/novog
+     * razdoblja) ili otkaže.
+     */
+    private static function reserveForQuota($db, int $orderId, array $order): array
+    {
+        $msg = 'Đurđa kvota dokumenata je potrošena — narudžba je REZERVIRANA. '
+             . 'Nadogradite paket (ili pričekajte novo razdoblje) pa kliknite "Fiskaliziraj sada".';
+        $alreadyWarned = str_contains((string) ($order['fiscal_error'] ?? ''), 'REZERVIRANA');
+
+        $db->update('orders', [
+            'fiscal_status' => 'none',
+            'fiscal_error'  => mb_substr($msg, 0, 255),
+            'fiscal_last_error_code' => 'plan_limit_reached',
+            'fiscal_next_retry_at'   => null,
+        ], 'id = :id', [':id' => $orderId]);
+        self::logEvent($db, $orderId, 'error', [
+            'error_code' => 'plan_limit_reached',
+            'error_message' => 'Kvota potrošena — narudžba rezervirana (broj NIJE dodijeljen, kvota NIJE potrošena).',
+        ]);
+
+        if (!$alreadyWarned) {
+            try {
+                Mailer::send(
+                    s('shop_email', ''),
+                    '⏸ Narudžba ' . ($order['order_number'] ?? "#$orderId") . ' čeka fiskalizaciju — kvota potrošena',
+                    '<h2 style="margin:0 0 8px">Kvota đurđa paketa je potrošena</h2>'
+                    . '<p>Narudžba <strong>' . e($order['order_number'] ?? "#$orderId") . '</strong> ('
+                    . fmt_price($order['total'] ?? 0) . ') je plaćena i <strong>rezervirana</strong> — račun NIJE izdan i ništa nije izgubljeno.</p>'
+                    . '<p>Što napraviti: nadogradite paket (ili pričekajte novo obračunsko razdoblje), zatim u administraciji '
+                    . 'otvorite narudžbu i kliknite <strong>"Fiskaliziraj sada"</strong>. Pazite na zakonski rok fiskalizacije od 48 h od naplate!</p>'
+                    . '<p><a href="https://mojadjurdja.com/cjenik?utm_source=webshop&utm_medium=email&utm_campaign=quota_full" '
+                    . 'style="background:#1f2937;color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Nadogradi paket</a></p>'
+                );
+            } catch (Throwable $e) {
+                error_log('[Fiscalizer] quota mail: ' . $e->getMessage());
+            }
+        }
+        return [
+            'success' => false,
+            'reserved' => true,
+            'error' => $msg,
+            'apiErrorCode' => 'plan_limit_reached',
+        ];
     }
 
     private static function markFailed($db, int $orderId, string $error, ?string $errorCode = null): void

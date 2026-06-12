@@ -26,13 +26,15 @@ $heroTitle = $hero['title'] !== '' ? $hero['title'] : ('Dobrodošli u ' . shop_n
 require __DIR__ . '/includes/header.php';
 ?>
 
-<section class="hero <?= $hero['style'] === 'image' && $hero['image'] ? 'hero-image' : ($hero['style'] === 'minimal' ? 'hero-minimal' : 'hero-gradient') ?>"
-  <?php if ($hero['style'] === 'image' && $hero['image']): ?>style="background-image:url('<?= e(upload_url('theme/' . $hero['image'])) ?>')"<?php endif; ?>>
+<section class="hero <?= $hero['style'] === 'image' && $hero['image'] ? 'hero-image' : ($hero['style'] === 'minimal' ? 'hero-minimal' : 'hero-gradient') ?> <?= $hero['align'] === 'left' ? 'hero-left' : '' ?>"
+  <?php if ($hero['style'] === 'image' && $hero['image']): $op = number_format($hero['overlay'] / 100, 2, '.', ''); ?>
+    style="background-image:linear-gradient(rgba(10,14,26,<?= $op ?>),rgba(10,14,26,<?= $op ?>)),url('<?= e(upload_url('theme/' . $hero['image'])) ?>')"
+  <?php endif; ?>>
   <div class="container">
     <div class="hero-inner fade-up">
-      <span class="eyebrow">✓ Fiskalizirani račun uz svaku kupnju</span>
+      <?php if (trim($hero['eyebrow']) !== ''): ?><span class="eyebrow"><?= e($hero['eyebrow']) ?></span><?php endif; ?>
       <h1><?= e($heroTitle) ?></h1>
-      <p><?= e($hero['subtitle']) ?></p>
+      <?php if (trim($hero['subtitle']) !== ''): ?><p><?= e($hero['subtitle']) ?></p><?php endif; ?>
       <a href="<?= e($hero['cta_link']) ?>" class="btn btn-lg <?= $hero['style'] === 'minimal' ? '' : 'btn-accent' ?>"><?= e($hero['cta_text']) ?> →</a>
     </div>
   </div>

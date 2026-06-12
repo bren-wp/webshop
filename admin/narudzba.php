@@ -118,7 +118,13 @@ require __DIR__ . '/templates/header.php';
           <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="fiscalize"><button class="abtn sm">Pokušaj ponovno</button></form>
         <?php endif; ?>
       <?php else: ?>
-        <p style="color:#8b90a0;font-size:13px;margin:0 0 10px">Račun još nije fiskaliziran. Fiskalizacija je moguća tek kad je narudžba plaćena.</p>
+        <?php if ($order['fiscal_last_error_code'] === 'plan_limit_reached'): ?>
+          <div class="alert alert-warning">⏸ <strong>REZERVIRANO — kvota paketa je bila potrošena.</strong><br>
+          Broj računa NIJE dodijeljen i ništa nije izgubljeno. Nadogradite paket (ili pričekajte novo razdoblje)
+          pa kliknite "Fiskaliziraj sada". Pazite na zakonski rok 48 h od naplate.</div>
+        <?php else: ?>
+          <p style="color:#8b90a0;font-size:13px;margin:0 0 10px">Račun još nije fiskaliziran. Fiskalizacija je moguća tek kad je narudžba plaćena.</p>
+        <?php endif; ?>
         <?php if ($order['payment_status'] === 'paid'): ?>
           <form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="fiscalize"><button class="abtn sm">Fiskaliziraj sada</button></form>
         <?php endif; ?>

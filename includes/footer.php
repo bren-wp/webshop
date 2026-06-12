@@ -78,6 +78,15 @@ $djLink = 'https://mojadjurdja.com/?utm_source=webshop&utm_medium=footer&utm_cam
   </div>
 </aside>
 
+<?php if ($branding): $promo = Djurdja::promo(); if ($promo['enabled']): ?>
+<a class="promo-bar" href="<?= e($promo['url']) ?>" target="_blank" rel="noopener" aria-label="MojaĐurđa promo">
+  <div class="promo-track">
+    <?php for ($i = 0; $i < 4; $i++): ?><span><span class="pb-dot">Đ</span> <?= e($promo['text']) ?></span><?php endfor; ?>
+  </div>
+</a>
+<style>body{padding-bottom:42px}</style>
+<?php endif; endif; ?>
+
 <div id="toast-wrap"></div>
 <script src="<?= e(asset('js/app.js')) ?>" defer></script>
 </body>

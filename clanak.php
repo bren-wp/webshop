@@ -2,7 +2,7 @@
 /** Blog članak — Article JSON-LD, share, povezani članci. Plaćeni plan. */
 require_once __DIR__ . '/core/bootstrap.php';
 
-if (!Djurdja::customizationAllowed()) { http_response_code(404); require __DIR__ . '/404.php'; exit; }
+if (!Djurdja::blogActive()) { http_response_code(404); require __DIR__ . '/404.php'; exit; }
 
 $slug = trim((string) ($_GET['slug'] ?? ''));
 $post = $slug !== '' ? $db->fetch('SELECT * FROM blog_posts WHERE slug = :s AND is_published = 1', [':s' => $slug]) : null;

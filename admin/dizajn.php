@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($v['ok']) {
                 $fn = 'logo-' . Security::randomFileName($v['ext']);
                 if (move_uploaded_file($_FILES['logo']['tmp_name'], SHOP_ROOT . '/uploads/theme/' . $fn)) {
+                    Images::optimize(SHOP_ROOT . '/uploads/theme/' . $fn, 600, 240);
                     $old = s('logo');
                     if ($old) @unlink(SHOP_ROOT . '/uploads/theme/' . $old);
                     Settings::set('logo', $fn);
@@ -43,17 +44,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'hero') {
         $hero = [
             'style'    => in_array($_POST['style'] ?? '', ['gradient', 'image', 'minimal'], true) ? $_POST['style'] : 'gradient',
+            'eyebrow'  => mb_substr(trim((string) ($_POST['eyebrow'] ?? '')), 0, 90),
             'title'    => mb_substr(trim((string) $_POST['title']), 0, 120),
             'subtitle' => mb_substr(trim((string) $_POST['subtitle']), 0, 250),
             'cta_text' => mb_substr(trim((string) $_POST['cta_text']) ?: 'Razgledaj ponudu', 0, 50),
             'cta_link' => mb_substr(trim((string) $_POST['cta_link']) ?: url('proizvodi.php'), 0, 250),
             'image'    => Theme::hero()['image'],
+            'align'    => ($_POST['align'] ?? '') === 'left' ? 'left' : 'center',
+            'overlay'  => max(0, min(85, (int) ($_POST['overlay'] ?? 45))),
         ];
         if (!empty($_FILES['hero_image']['name'])) {
             $v = Security::validateImageUpload($_FILES['hero_image']);
             if ($v['ok']) {
                 $fn = 'hero-' . Security::randomFileName($v['ext']);
                 if (move_uploaded_file($_FILES['hero_image']['tmp_name'], SHOP_ROOT . '/uploads/theme/' . $fn)) {
+                    Images::optimize(SHOP_ROOT . '/uploads/theme/' . $fn, 1920, 640); // hero = širi format
                     if ($hero['image']) @unlink(SHOP_ROOT . '/uploads/theme/' . $hero['image']);
                     $hero['image'] = $fn;
                 }
@@ -161,7 +166,14 @@ require __DIR__ . '/templates/header.php';
         <option value="image" <?= $hero['style'] === 'image' ? 'selected' : '' ?>>Velika fotografija</option>
         <option value="minimal" <?= $hero['style'] === 'minimal' ? 'selected' : '' ?>>Minimalistički</option>
       </select></div>
-    <div><label class="al">Hero fotografija (za stil "fotografija")</label><input type="file" class="ainput" name="hero_image" accept="image/jpeg,image/png,image/webp"><?php if ($hero['image']): ?><span class="sub">trenutno: <?= e($hero['image']) ?></span><?php endif; ?></div>
+    <div><label class="al">Hero fotografija (automatski se optimizira na 1920 px)</label><input type="file" class="ainput" name="hero_image" accept="image/jpeg,image/png,image/webp"><?php if ($hero['image']): ?><span class="sub">trenutno: <?= e($hero['image']) ?></span><?php endif; ?></div>
+    <div><label class="al">Mala oznaka iznad naslova (prazno = bez oznake)</label><input class="ainput" name="eyebrow" maxlength="90" value="<?= e($hero['eyebrow']) ?>" placeholder="✓ Fiskalizirani račun uz svaku kupnju"></div>
+    <div><label class="al">Poravnanje teksta</label>
+      <select class="ainput" name="align">
+        <option value="center" <?= $hero['align'] === 'center' ? 'selected' : '' ?>>Sredina</option>
+        <option value="left" <?= $hero['align'] === 'left' ? 'selected' : '' ?>>Lijevo</option>
+      </select></div>
+    <div><label class="al">Zatamnjenje fotografije (%) — čitljivost teksta</label><input class="ainput" type="number" min="0" max="85" name="overlay" value="<?= (int) $hero['overlay'] ?>"></div>
     <div class="full"><label class="al">Naslov (prazno = "Dobrodošli u …")</label><input class="ainput" name="title" maxlength="120" value="<?= e($hero['title']) ?>"></div>
     <div class="full"><label class="al">Podnaslov</label><input class="ainput" name="subtitle" maxlength="250" value="<?= e($hero['subtitle']) ?>"></div>
     <div><label class="al">Tekst gumba</label><input class="ainput" name="cta_text" maxlength="50" value="<?= e($hero['cta_text']) ?>"></div>

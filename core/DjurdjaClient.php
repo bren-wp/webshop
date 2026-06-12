@@ -106,6 +106,12 @@ class DjurdjaClient
         return $this->call('POST', '/shop/variant-sale', ['sales' => $sales]);
     }
 
+    /** Promo traka — centralizirani sadržaj reklame (free plan). */
+    public function promo(): array
+    {
+        return $this->call('GET', '/shop/promo');
+    }
+
     public function fiscalize(array $payload): array
     {
         return $this->call('POST', '/fiscalize', $payload);
@@ -269,6 +275,9 @@ class DjurdjaClient
 
             case 'POST /shop/variant-sale':
                 return ['ok' => true, 'updated' => count($body['sales'] ?? [])];
+
+            case 'GET /shop/promo':
+                return ['enabled' => true, 'text' => 'MOCK promo: MojaĐurđa — blagajna, e-računi i besplatna web trgovina ✨', 'url' => 'https://mojadjurdja.com/?utm_source=webshop&utm_medium=promobar'];
 
             case 'POST /fiscalize':
                 $n = (int) $this->mockSetting('mock_fiscal_counter', '0') + 1;

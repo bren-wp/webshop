@@ -98,6 +98,52 @@ class Djurdja
         return !self::brandingRequired();
     }
 
+    /** Blog: plaćeni plan + korisnikov prekidač (na free uvijek ugašen). */
+    public static function blogActive(): bool
+    {
+        return self::customizationAllowed() && Settings::get('blog_enabled', '1') === '1';
+    }
+
+    /**
+     * Promo traka (free plan): sadržaj se centralizirano uređuje u đurđi
+     * (Webshop upravljanje) i povlači jednom dnevno. Fallback na zadani
+     * tekst dok backend nema /shop/promo.
+     */
+    public static function promo(): array
+    {
+        $p = Settings::getJson('djurdja_promo');
+        $enabled = !array_key_exists('enabled', $p) || !empty($p['enabled']);
+        $text = trim((string) ($p['text'] ?? ''));
+        $url = (string) ($p['url'] ?? '');
+        if ($text === '') {
+            $text = 'Ovu trgovinu pokreće MojaĐurđa — fiskalna blagajna, e-računi i BESPLATNA web trgovina. Otvorite i vi svoju! 🛍️';
+        }
+        if (!preg_match('#^https://#', $url)) {
+            $url = 'https://mojadjurdja.com/?utm_source=webshop&utm_medium=promobar&ref=' . rawurlencode($_SERVER['HTTP_HOST'] ?? '');
+        }
+        return ['enabled' => $enabled, 'text' => $text, 'url' => $url];
+    }
+
+    /** Dnevno povlačenje promo sadržaja s đurđe (best-effort). */
+    private static function maybePromo(DjurdjaClient $client): void
+    {
+        $last = strtotime((string) Settings::get('djurdja_promo_at', ''));
+        if ($last && (time() - $last) < 24 * 3600) return;
+        try {
+            $p = $client->promo();
+            Settings::setJson('djurdja_promo', [
+                'enabled' => !empty($p['enabled']),
+                'text'    => mb_substr((string) ($p['text'] ?? ''), 0, 300),
+                'url'     => mb_substr((string) ($p['url'] ?? ''), 0, 300),
+            ]);
+            Settings::set('djurdja_promo_at', date('Y-m-d H:i:s'));
+        } catch (DjurdjaApiException $e) {
+            if ($e->httpStatus === 404) Settings::set('djurdja_promo_at', date('Y-m-d H:i:s')); // backend bez rute — ne pokušavaj stalno
+        } catch (Throwable $e) {
+            error_log('[Djurdja::promo] ' . $e->getMessage());
+        }
+    }
+
     /** Kvota dokumenata: ['used'=>..,'limit'=>..,'periodEnd'=>..] ili null (unlimited/nepoznato). */
     public static function quota(): ?array
     {
@@ -160,6 +206,7 @@ class Djurdja
             Settings::set('djurdja_last_error', null);
             self::maybeQuotaWarning();
             self::maybeHeartbeat($client);
+            self::maybePromo($client);
             return true;
         } catch (DjurdjaApiException $e) {
             if (in_array($e->httpStatus, [401, 403], true)) {

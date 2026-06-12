@@ -124,11 +124,14 @@ class Theme
         $h = Settings::getJson('hero');
         return [
             'style'    => in_array($h['style'] ?? '', ['gradient', 'image', 'minimal'], true) ? $h['style'] : 'gradient',
+            'eyebrow'  => array_key_exists('eyebrow', $h) ? (string) $h['eyebrow'] : '✓ Fiskalizirani račun uz svaku kupnju',
             'title'    => $h['title'] ?? '',
             'subtitle' => $h['subtitle'] ?? 'Provjerena kvaliteta, brza dostava i račun za svaku kupnju.',
             'cta_text' => $h['cta_text'] ?? 'Razgledaj ponudu',
             'cta_link' => $h['cta_link'] ?? url('proizvodi.php'),
             'image'    => $h['image'] ?? null,
+            'align'    => in_array($h['align'] ?? '', ['center', 'left'], true) ? $h['align'] : 'center',
+            'overlay'  => max(0, min(85, (int) ($h['overlay'] ?? 45))), // zatamnjenje slike u %
         ];
     }
 

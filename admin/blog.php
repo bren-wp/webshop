@@ -59,6 +59,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         flash('success', 'Članak spremljen.');
         redirect('admin/blog.php?id=' . $id);
+    } elseif ($action === 'toggle_blog') {
+        Settings::set('blog_enabled', !empty($_POST['blog_enabled']) ? '1' : '0');
+        flash('success', Settings::get('blog_enabled') === '1' ? 'Blog je UKLJUČEN — vidljiv posjetiteljima.' : 'Blog je isključen (članci se čuvaju, samo nisu vidljivi).');
+        redirect('admin/blog.php');
     } elseif ($action === 'delete') {
         $id = (int) $_POST['id'];
         $old = $db->fetchColumn('SELECT cover_image FROM blog_posts WHERE id = :id', [':id' => $id]);
@@ -90,6 +94,17 @@ require __DIR__ . '/templates/header.php';
   </div>
 <?php endif; ?>
 
+<?php if ($paid): ?>
+<div class="acard" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px">
+  <form method="post" style="display:flex;align-items:center;gap:12px">
+    <?= csrf_field() ?><input type="hidden" name="action" value="toggle_blog">
+    <label class="acheck" style="margin:0"><input type="checkbox" name="blog_enabled" <?= s('blog_enabled', '1') === '1' ? 'checked' : '' ?> onchange="this.form.submit()">
+      <strong>Blog vidljiv posjetiteljima</strong></label>
+  </form>
+  <span class="sub" style="margin:0">Isključite ako blog trenutno ne želite — članci se čuvaju i vraćaju jednim klikom.</span>
+  <?php if (s('blog_enabled', '1') === '1'): ?><a class="abtn ghost sm" style="margin-left:auto" target="_blank" href="<?= e(url('blog')) ?>">Pogledaj blog ↗</a><?php endif; ?>
+</div>
+<?php endif; ?>
 <div style="display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start;<?= $paid ? '' : 'opacity:.45;pointer-events:none' ?>">
   <div class="acard">
     <h3>Članci (<?= count($posts) ?>)</h3>

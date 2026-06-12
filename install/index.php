@@ -86,16 +86,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Naziv baze smije sadržavati samo slova, brojke i donju crtu.';
             $step = '2';
         } else {
+            // Potpuno automatski (kao WordPress, ali bolje): probaj se spojiti na bazu;
+            // ako ne postoji — sami je kreiramo; tek ako hosting brani CREATE DATABASE
+            // (česti cPanel slučaj), objasnimo korisniku točno što kliknuti.
             try {
-                if ($S['db']['create']) {
-                    $pdo = new PDO("mysql:host={$S['db']['host']};charset=utf8mb4", $S['db']['user'], $S['db']['pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-                    $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$S['db']['name']}` CHARACTER SET utf8mb4 COLLATE utf8mb4_croatian_ci");
-                }
                 $pdo = new PDO("mysql:host={$S['db']['host']};dbname={$S['db']['name']};charset=utf8mb4", $S['db']['user'], $S['db']['pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
                 $step = '3';
             } catch (PDOException $e) {
-                $error = 'Spajanje na bazu nije uspjelo: ' . $e->getMessage();
-                $step = '2';
+                $unknownDb = ($e->getCode() == 1049 || str_contains($e->getMessage(), 'Unknown database'));
+                if ($unknownDb) {
+                    try {
+                        $pdo = new PDO("mysql:host={$S['db']['host']};charset=utf8mb4", $S['db']['user'], $S['db']['pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                        $pdo->exec("CREATE DATABASE IF NOT EXISTS `" . str_replace('`', '', $S['db']['name']) . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_croatian_ci");
+                        $pdo = new PDO("mysql:host={$S['db']['host']};dbname={$S['db']['name']};charset=utf8mb4", $S['db']['user'], $S['db']['pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+                        $step = '3'; // baza automatski kreirana ✓
+                    } catch (PDOException $e2) {
+                        $error = 'Baza "' . ie($S['db']['name']) . '" ne postoji, a vaš hosting ne dopušta automatsko kreiranje. '
+                            . 'Otvorite cPanel → <strong>MySQL® Databases</strong> → "Create New Database" (upišite ovo ime), '
+                            . 'zatim pod "Add User To Database" dodijelite svog korisnika toj bazi (ALL PRIVILEGES) — pa se vratite i kliknite Dalje. '
+                            . '<br><small>Napomena: cPanel imenima dodaje prefiks (npr. <code>korisnik_shop</code>) — upišite PUNO ime s prefiksom.</small>'
+                            . '<br><small>Tehnički detalj: ' . ie(mb_substr($e2->getMessage(), 0, 150)) . '</small>';
+                        $step = '2';
+                    }
+                } else {
+                    $error = 'Spajanje na bazu nije uspjelo: ' . ie($e->getMessage())
+                        . '<br><small>Provjerite host (na većini hostinga: <code>localhost</code>), korisničko ime i lozinku iz cPanel → MySQL Databases.</small>';
+                    $step = '2';
+                }
             }
         }
     }

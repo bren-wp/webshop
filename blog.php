@@ -2,7 +2,7 @@
 /** Blog — listing (izdvojeni najnoviji članak + grid kartica). Plaćeni plan. */
 require_once __DIR__ . '/core/bootstrap.php';
 
-if (!Djurdja::customizationAllowed()) { http_response_code(404); require __DIR__ . '/404.php'; exit; }
+if (!Djurdja::blogActive()) { http_response_code(404); require __DIR__ . '/404.php'; exit; }
 
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $per = 9;
