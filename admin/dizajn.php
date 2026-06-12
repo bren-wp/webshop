@@ -14,10 +14,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'accent'    => preg_match('/^#[0-9a-f]{6}$/i', $_POST['accent'] ?? '') && !empty($_POST['use_custom']) ? $_POST['accent'] : null,
             'font_pair' => isset(Theme::FONT_PAIRS[$_POST['font_pair'] ?? '']) ? $_POST['font_pair'] : 'system',
             'radius'    => in_array($_POST['radius'] ?? '', ['none', 'soft', 'round'], true) ? $_POST['radius'] : 'soft',
-            // Vlastiti CSS je pogodnost plaćenog plana — na besplatnom čuvamo staru vrijednost
-            'custom_css'=> Djurdja::customizationAllowed()
-                ? mb_substr((string) ($_POST['custom_css'] ?? ''), 0, 20000)
-                : (string) (Settings::getJson('theme')['custom_css'] ?? ''),
+            // Sprema se UVIJEK (i na free planu) — primjenjuje se tek na plaćenom
+            // (Theme::get() na izlogu sam forsira default dok plan nije aktivan)
+            'custom_css'=> mb_substr((string) ($_POST['custom_css'] ?? ''), 0, 20000),
         ];
         Settings::setJson('theme', $theme);
 
@@ -74,7 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('admin/dizajn.php');
 }
 
-$theme = Theme::get();
+$theme = Theme::get(false); // false = prikaži SPREMLJENE vrijednosti (i na free planu se čuvaju)
+$paid = Djurdja::customizationAllowed();
 $themeCfg = Settings::getJson('theme');
 $hero = Theme::hero();
 $sections = Theme::sections();
@@ -125,15 +125,27 @@ require __DIR__ . '/templates/header.php';
     </div>
   </div>
 
-  <?php if (Djurdja::customizationAllowed()): ?>
-    <label class="al" style="margin-top:10px">Napredno: vlastiti CSS <span class="badge violet">plaćeni plan</span></label>
-    <textarea class="ainput" name="custom_css" rows="4" placeholder=".hero h1 { text-transform: uppercase; }"><?= e($theme['custom_css']) ?></textarea>
-  <?php else: ?>
-    <label class="al" style="margin-top:10px">Napredno: vlastiti CSS <span class="badge amber">🔒 plaćeni plan</span></label>
-    <textarea class="ainput" rows="3" disabled placeholder="Vlastiti CSS i prilagodba predložaka dostupni su u plaćenim paketima."></textarea>
-    <p class="sub" style="margin-top:6px">Otključajte vlastiti CSS, uklanjanje MojaĐurđa potpisa i logo na računima —
-      <a href="https://mojadjurdja.com/cjenik?utm_source=webshop&utm_medium=design&utm_campaign=customcss" target="_blank">pogledajte pakete ↗</a></p>
+  <?php if (!$paid): ?>
+    <div style="margin-top:16px;border-radius:14px;padding:18px 20px;color:#fff;background:linear-gradient(135deg,#6d28d9,#a855f7 60%,#ec4899);box-shadow:0 8px 24px rgba(124,58,237,.35)">
+      <div style="font-size:15px;font-weight:800;letter-spacing:.2px">🔒 Teme i prilagodbe su pogodnost plaćenog paketa</div>
+      <p style="font-size:13px;margin:8px 0 10px;opacity:.95;line-height:1.65">
+        Slobodno već sada složite izgled iz snova — <strong>sve se postavke čuvaju</strong> i automatski
+        primijene istog trena kad aktivirate paket. Do tada posjetitelji vide zadanu Đurđa temu.
+        Istekne li paket, trgovina se sama vrati na zadano — a vaše podešavanje čeka spremno za povratak.
+      </p>
+      <ul style="font-size:12.5px;margin:0 0 12px;padding-left:18px;line-height:1.9;opacity:.95">
+        <li><strong>6 premium tema</strong> + vlastite boje, fontovi i zaobljenja</li>
+        <li><strong>Vlastiti CSS</strong> za potpunu kontrolu izgleda</li>
+        <li><strong>Blog</strong> za SEO sadržaj koji dovodi kupce s Googlea</li>
+        <li>Bez "Pokreće MojaĐurđa" potpisa + <strong>vaš logo na računima</strong></li>
+      </ul>
+      <a class="abtn sm" style="background:#fff;color:#6d28d9;font-weight:800" target="_blank"
+         href="https://mojadjurdja.com/cjenik?utm_source=webshop&utm_medium=design&utm_campaign=themes">⚡ Otključaj sve — pogledaj pakete ↗</a>
+    </div>
   <?php endif; ?>
+
+  <label class="al" style="margin-top:14px">Napredno: vlastiti CSS <span class="badge <?= $paid ? 'violet' : 'amber' ?>"><?= $paid ? 'plaćeni plan' : '🔒 plaćeni plan — sprema se, primjenjuje nakon aktivacije' ?></span></label>
+  <textarea class="ainput" name="custom_css" rows="4" placeholder=".hero h1 { text-transform: uppercase; }" <?= $paid ? '' : 'readonly style="opacity:.6"' ?>><?= e($theme['custom_css']) ?></textarea>
   <button class="abtn" style="margin-top:16px">💾 Spremi temu</button>
 </div>
 </form>

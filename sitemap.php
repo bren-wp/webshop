@@ -24,4 +24,13 @@ foreach ($db->fetchAll('SELECT slug, updated_at FROM products WHERE is_visible =
 foreach ($db->fetchAll('SELECT slug, updated_at FROM pages WHERE is_visible = 1') as $pg) {
     $u(SITE_URL . '/s/' . $pg['slug'], $pg['updated_at'], '0.4');
 }
+if (Djurdja::customizationAllowed()) {
+    $blogPosts = $db->fetchAll('SELECT slug, updated_at FROM blog_posts WHERE is_published = 1');
+    if ($blogPosts) {
+        $u(SITE_URL . '/blog', null, '0.6');
+        foreach ($blogPosts as $bp) {
+            $u(SITE_URL . '/blog/' . $bp['slug'], $bp['updated_at'], '0.6');
+        }
+    }
+}
 echo '</urlset>';

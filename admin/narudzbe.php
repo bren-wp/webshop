@@ -54,7 +54,8 @@ require __DIR__ . '/templates/header.php';
         <td style="white-space:nowrap"><?= date('d.m.Y H:i', strtotime($o['created_at'])) ?></td>
         <td><?= e($o['customer_name']) ?><br><small style="color:#9ca3af"><?= e($o['customer_email']) ?></small></td>
         <td><?= e(Orders::paymentLabel($o['payment_method'])) ?></td>
-        <td><span class="badge <?= $o['status'] === 'delivered' ? 'green' : (in_array($o['status'], ['cancelled','refunded']) ? 'red' : 'blue') ?>"><?= e(Orders::statusLabel($o['status'])) ?></span></td>
+        <td><span class="badge <?= $o['status'] === 'delivered' ? 'green' : (in_array($o['status'], ['cancelled','refunded']) ? 'red' : 'blue') ?>"><?= e(Orders::statusLabel($o['status'])) ?></span>
+          <?php if ($o['withdrawal_requested_at']): ?><br><span class="badge red" title="Kupac zatražio jednostrani raskid ugovora">⚠ RASKID</span><?php endif; ?></td>
         <td><span class="badge <?= $o['payment_status'] === 'paid' ? 'green' : ($o['payment_status'] === 'failed' ? 'red' : 'amber') ?>"><?= $o['payment_status'] === 'paid' ? 'Plaćeno' : ($o['payment_status'] === 'failed' ? 'Neuspjelo' : 'Čeka') ?></span></td>
         <td><?php $map = ['fiscalized'=>['green','Fiskaliziran'],'pending_retry'=>['amber','Retry'],'failed'=>['red','Greška'],'failed_expired'=>['red','Isteklo!'],'stornoed'=>['gray','Storno'],'none'=>['gray','—'],'pending'=>['amber','U tijeku']]; [$bc,$bt] = $map[$o['fiscal_status']] ?? ['gray',$o['fiscal_status']]; ?>
           <span class="badge <?= $bc ?>"><?= e($bt) ?></span></td>

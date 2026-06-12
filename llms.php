@@ -55,6 +55,18 @@ if ($top) {
     echo "\n";
 }
 
+if (Djurdja::customizationAllowed()) {
+    $blogPosts = $db->fetchAll('SELECT title, slug, excerpt FROM blog_posts WHERE is_published = 1 ORDER BY published_at DESC LIMIT 15');
+    if ($blogPosts) {
+        echo "## Blog — savjeti i novosti\n\n";
+        foreach ($blogPosts as $bp) {
+            echo '- [' . $bp['title'] . '](' . SITE_URL . '/blog/' . $bp['slug'] . ')'
+                . ($bp['excerpt'] ? ' — ' . mb_substr(strip_tags($bp['excerpt']), 0, 120) : '') . "\n";
+        }
+        echo "\n";
+    }
+}
+
 if ($pages) {
     echo "## Informacije\n\n";
     foreach ($pages as $pg) {

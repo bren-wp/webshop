@@ -38,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!$v['ok']) { flash('error', $nm . ': ' . $v['error']); continue; }
                 $fn = Security::randomFileName($v['ext']);
                 if (move_uploaded_file($file['tmp_name'], SHOP_ROOT . '/uploads/products/' . $fn)) {
+                    Images::optimize(SHOP_ROOT . '/uploads/products/' . $fn); // auto smanjenje + thumb
                     $hasPrimary = (int) $db->fetchColumn('SELECT COUNT(*) FROM product_images WHERE product_id = :p AND is_primary = 1', [':p' => $id]);
                     $db->insert('product_images', [
                         'product_id' => $id, 'filename' => $fn,
@@ -54,6 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $img = $db->fetch('SELECT * FROM product_images WHERE id = :i AND product_id = :p', [':i' => (int) $_POST['img_id'], ':p' => $id]);
         if ($img) {
             @unlink(SHOP_ROOT . '/uploads/products/' . $img['filename']);
+            @unlink(SHOP_ROOT . '/uploads/products/' . Images::thumbName($img['filename']));
             $db->delete('product_images', 'id = :i', [':i' => $img['id']]);
             flash('success', 'Slika obrisana.');
         }

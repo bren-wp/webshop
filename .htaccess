@@ -20,6 +20,8 @@
     RewriteRule ^p/([a-z0-9-]+)/?$ proizvod.php?slug=$1 [L,QSA]
     RewriteRule ^k/([a-z0-9-]+)/?$ proizvodi.php?cat=$1 [L,QSA]
     RewriteRule ^s/([a-z0-9-]+)/?$ stranica.php?slug=$1 [L,QSA]
+    RewriteRule ^blog/?$ blog.php [L,QSA]
+    RewriteRule ^blog/([a-z0-9-]+)/?$ clanak.php?slug=$1 [L,QSA]
     RewriteRule ^sitemap\.xml$ sitemap.php [L]
     RewriteRule ^robots\.txt$ robots.php [L]
     RewriteRule ^llms\.txt$ llms.php [L]

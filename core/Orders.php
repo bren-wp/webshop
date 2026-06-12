@@ -59,6 +59,7 @@ class Orders
                 'country'        => 'HR',
                 'note'           => mb_substr(trim($customer['note'] ?? ''), 0, 2000) ?: null,
                 'guest_token'    => bin2hex(random_bytes(24)),
+                'customer_id'    => !empty($_SESSION['customer_id']) ? (int) $_SESSION['customer_id'] : null,
                 'ip'             => client_ip(),
             ]);
 

@@ -49,9 +49,23 @@ class Theme
                        'url' => 'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap'],
     ];
 
-    /** Efektivna tema: preset + vlasnikove prilagodbe. */
-    public static function get(): array
+    /**
+     * Efektivna tema: preset + vlasnikove prilagodbe.
+     * $enforcePlan=true (storefront): na BESPLATNOM planu sve prilagodbe se
+     * ignoriraju i vraća se zadana tema — postavke se NE BRIŠU, pa se kod
+     * nadogradnje plana sve odmah vraća kako je korisnik podesio.
+     * dizajn.php zove get(false) da u admin formi prikaže spremljene vrijednosti.
+     */
+    public static function get(bool $enforcePlan = true): array
     {
+        if ($enforcePlan && !Djurdja::customizationAllowed()) {
+            $t = self::PRESETS['djurdja'];
+            $t['preset'] = 'djurdja';
+            $t['font_pair'] = 'system';
+            $t['radius'] = 'soft';
+            $t['custom_css'] = '';
+            return $t;
+        }
         $cfg = Settings::getJson('theme');
         $presetKey = $cfg['preset'] ?? 'djurdja';
         $preset = self::PRESETS[$presetKey] ?? self::PRESETS['djurdja'];

@@ -12,6 +12,7 @@ $fo = (float) s('shipping_free_over', 0);
 $shipping = $allServices ? 0.0 : (($fo > 0 && $subtotal >= $fo) ? 0.0 : (float) s('shipping_flat', 0));
 $pm = new PaymentManager();
 $methods = $pm->getActiveMethods();
+$customer = Customer::current(); // prijavljeni kupac → podaci se sami popune
 
 $pageTitle = 'Blagajna';
 $pageDesc = 'Dovršite narudžbu — ' . shop_name();
@@ -30,13 +31,16 @@ require __DIR__ . '/includes/header.php';
       <div style="display:grid;gap:22px">
         <div class="card">
           <h3>1 · Podaci za dostavu</h3>
+          <?php if (!$customer): ?>
+            <p style="font-size:13px;color:var(--c-muted);margin:0 0 12px">Imate račun? <a href="<?= e(url('prijava.php?next=narudzba.php')) ?>"><strong>Prijavite se</strong></a> i podaci se popune sami.</p>
+          <?php endif; ?>
           <div class="form-grid">
-            <div class="full"><label class="f-label">Ime i prezime *</label><input class="f-input" name="name" required maxlength="200" autocomplete="name"></div>
-            <div><label class="f-label">E-mail *</label><input class="f-input" type="email" name="email" required maxlength="190" autocomplete="email"></div>
-            <div><label class="f-label">Telefon</label><input class="f-input" name="phone" maxlength="40" autocomplete="tel"></div>
-            <div class="full"><label class="f-label">Adresa *</label><input class="f-input" name="address" required maxlength="255" autocomplete="street-address"></div>
-            <div><label class="f-label">Grad *</label><input class="f-input" name="city" required maxlength="100" autocomplete="address-level2"></div>
-            <div><label class="f-label">Poštanski broj *</label><input class="f-input" name="postal" required pattern="\d{4,10}" maxlength="10" autocomplete="postal-code"></div>
+            <div class="full"><label class="f-label">Ime i prezime *</label><input class="f-input" name="name" required maxlength="200" autocomplete="name" value="<?= e($customer['name'] ?? '') ?>"></div>
+            <div><label class="f-label">E-mail *</label><input class="f-input" type="email" name="email" required maxlength="190" autocomplete="email" value="<?= e($customer['email'] ?? '') ?>"></div>
+            <div><label class="f-label">Telefon</label><input class="f-input" name="phone" maxlength="40" autocomplete="tel" value="<?= e($customer['phone'] ?? '') ?>"></div>
+            <div class="full"><label class="f-label">Adresa *</label><input class="f-input" name="address" required maxlength="255" autocomplete="street-address" value="<?= e($customer['address'] ?? '') ?>"></div>
+            <div><label class="f-label">Grad *</label><input class="f-input" name="city" required maxlength="100" autocomplete="address-level2" value="<?= e($customer['city'] ?? '') ?>"></div>
+            <div><label class="f-label">Poštanski broj *</label><input class="f-input" name="postal" required pattern="\d{4,10}" maxlength="10" autocomplete="postal-code" value="<?= e($customer['postal_code'] ?? '') ?>"></div>
             <div class="full"><label class="f-label">Napomena (opcionalno)</label><textarea class="f-input" name="note" rows="2" maxlength="2000"></textarea></div>
           </div>
         </div>

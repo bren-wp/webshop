@@ -60,6 +60,10 @@ require __DIR__ . '/includes/header.php';
       </div>
 
       <a href="<?= e(url('proizvodi.php')) ?>" class="btn btn-ghost" style="width:100%">← Natrag u trgovinu</a>
+      <p style="font-size:12px;color:var(--c-muted);text-align:center;margin:4px 0 0">
+        Pravo na jednostrani raskid ugovora u roku 14 dana od primitka robe —
+        <a href="<?= e(url('raskid-ugovora.php')) ?>">online obrazac</a>.
+      </p>
     </div>
   </div>
 </div>

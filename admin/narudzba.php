@@ -58,6 +58,13 @@ $flog = $db->fetchAll('SELECT * FROM fiscal_log WHERE order_id = :o ORDER BY id 
 $pageTitle = 'Narudžba ' . $order['order_number'];
 require __DIR__ . '/templates/header.php';
 ?>
+<?php if ($order['withdrawal_requested_at']): ?>
+<div class="alert alert-error">
+  ⚠ <strong>Kupac je zatražio JEDNOSTRANI RASKID UGOVORA</strong> — <?= e(date('d.m.Y. u H:i', strtotime($order['withdrawal_requested_at']))) ?>.
+  <?= $order['withdrawal_reason'] ? 'Razlog: ' . e($order['withdrawal_reason']) . '.' : 'Bez navedenog razloga (zakonski to nije obavezno).' ?>
+  Zakonska obveza: povrat sredstava kupcu u roku 14 dana od povrata robe. Ako je račun fiskaliziran, nakon povrata napravite storno.
+</div>
+<?php endif; ?>
 <div style="display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start">
   <div style="display:grid;gap:20px">
     <div class="acard">

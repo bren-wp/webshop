@@ -98,7 +98,12 @@ class Mailer
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:14px 0">' . $rows
             . '<tr><td style="padding:12px 0;font-size:16px"><strong>Ukupno</strong></td><td align="right" style="padding:12px 0;font-size:16px"><strong>' . fmt_price($order['total']) . '</strong></td></tr></table>'
             . $payInfo
-            . '<p style="margin-top:22px"><a href="' . e($statusUrl) . '" style="background:#1f2937;color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Pregled narudžbe</a></p>';
+            . '<p style="margin-top:22px"><a href="' . e($statusUrl) . '" style="background:#1f2937;color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Pregled narudžbe</a></p>'
+            // Predugovorna obavijest o pravu na raskid (ZZP) — drži zakonski rok na 14 dana
+            . '<p style="color:#6b7280;font-size:12px;border-top:1px solid #f3f4f6;padding-top:12px;margin-top:22px">'
+            . 'Pravo na jednostrani raskid: ugovor možete raskinuti bez navođenja razloga u roku 14 dana od primitka robe, '
+            . 'putem online obrasca: <a href="' . e(SITE_URL . '/raskid-ugovora.php') . '" style="color:#4f46e5">' . e(SITE_URL . '/raskid-ugovora.php') . '</a>. '
+            . 'Detalji u <a href="' . e(SITE_URL . '/s/uvjeti-koristenja') . '" style="color:#6b7280">uvjetima korištenja</a>.</p>';
 
         $ok = self::send($order['customer_email'], 'Potvrda narudžbe ' . $order['order_number'], $html);
 

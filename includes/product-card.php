@@ -14,7 +14,7 @@ $outOfStock = ((int) $p['track_stock'] === 1 && (float) ($p['stock_qty'] ?? 0) <
       <span class="p-badge featured">★ Izdvojeno</span>
     <?php endif; ?>
     <?php if (!empty($p['image'])): ?>
-      <img src="<?= e(upload_url('products/' . $p['image'])) ?>" alt="<?= e($p['name']) ?>" loading="lazy" width="400" height="400">
+      <img src="<?= e(upload_url('products/' . Images::thumbOr($p['image'], SHOP_ROOT . '/uploads/products/'))) ?>" alt="<?= e($p['name']) ?>" loading="lazy" width="400" height="400">
     <?php else: ?>
       <div class="noimg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
     <?php endif; ?>

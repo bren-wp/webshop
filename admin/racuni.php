@@ -38,7 +38,15 @@ if ($q !== '') {
     $params[':q'] = '%' . $q . '%';
 }
 
-$receipts = $db->fetchAll("SELECT * FROM orders WHERE $where ORDER BY fiscalized_at DESC, id DESC LIMIT 500", $params);
+$rcPage = max(1, (int) ($_GET['page'] ?? 1));
+$rcPer = 50;
+$rcTotal = (int) $db->fetchColumn("SELECT COUNT(*) FROM orders WHERE $where", $params);
+$rcPages = max(1, (int) ceil($rcTotal / $rcPer));
+$rcPage = min($rcPage, $rcPages);
+$receipts = $db->fetchAll(
+    "SELECT * FROM orders WHERE $where ORDER BY fiscalized_at DESC, id DESC LIMIT $rcPer OFFSET " . (($rcPage - 1) * $rcPer),
+    $params
+);
 $sumLive = 0.0;
 $cntFisk = 0;
 foreach ($receipts as $r) {
@@ -99,6 +107,14 @@ require __DIR__ . '/templates/header.php';
     <?php endforeach; ?>
     </tbody>
   </table>
+  <?php if ($rcPages > 1): ?>
+    <div class="pager" style="margin-top:14px">
+      <?php for ($i = 1; $i <= $rcPages; $i++): ?>
+        <?php if ($i === $rcPage): ?><span class="cur"><?= $i ?></span>
+        <?php else: ?><a href="?<?= e(http_build_query(array_merge($_GET, ['page' => $i]))) ?>"><?= $i ?></a><?php endif; ?>
+      <?php endfor; ?>
+    </div>
+  <?php endif; ?>
   <?php endif; ?>
 </div>
 <?php require __DIR__ . '/templates/footer.php'; ?>

@@ -26,6 +26,7 @@ $djLink = 'https://mojadjurdja.com/?utm_source=webshop&utm_medium=footer&utm_cam
           <?php foreach ($footerPages as $fp): ?>
             <li><a href="<?= e(url('s/' . $fp['slug'])) ?>"><?= e($fp['title']) ?></a></li>
           <?php endforeach; ?>
+          <li><a href="<?= e(url('raskid-ugovora.php')) ?>"><strong>Jednostrani raskid ugovora</strong></a></li>
           <li><a href="<?= e(url('kontakt.php')) ?>">Kontakt</a></li>
         </ul>
       </div>
@@ -33,6 +34,7 @@ $djLink = 'https://mojadjurdja.com/?utm_source=webshop&utm_medium=footer&utm_cam
         <h4>Kupovina</h4>
         <ul>
           <li><a href="<?= e(url('proizvodi.php')) ?>">Svi proizvodi</a></li>
+          <li><a href="<?= e(url('moj-racun.php')) ?>">Moj račun</a></li>
           <li><a href="<?= e(url('kosarica.php')) ?>">Košarica</a></li>
           <li>Plaćanje: pouzeće<?php if ((new PaymentManager())->getMethod('stripe')['is_active'] ?? 0): ?>, kartice<?php endif; ?></li>
           <li>Račun (fiskaliziran) uz svaku kupnju</li>

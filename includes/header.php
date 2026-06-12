@@ -24,6 +24,8 @@ if (!Djurdja::shopAllowed()) {
 $company = Djurdja::company();
 $logoFile = s('logo');
 $navPages = $db->fetchAll('SELECT slug, title FROM pages WHERE is_visible = 1 AND in_nav = 1 ORDER BY sort_order, id');
+$blogActive = Djurdja::customizationAllowed()
+    && (int) $db->fetchColumn('SELECT COUNT(*) FROM blog_posts WHERE is_published = 1') > 0;
 $checkoutOk = Djurdja::checkoutAllowed();
 $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
 ?><!doctype html>
@@ -60,12 +62,16 @@ $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
       <nav class="main-nav">
         <a href="<?= e(url('')) ?>" <?= $currentScript === 'index.php' ? 'class="active"' : '' ?>>Početna</a>
         <a href="<?= e(url('proizvodi.php')) ?>" <?= in_array($currentScript, ['proizvodi.php', 'proizvod.php']) ? 'class="active"' : '' ?>>Proizvodi</a>
+        <?php if ($blogActive): ?><a href="<?= e(url('blog')) ?>" <?= in_array($currentScript, ['blog.php', 'clanak.php']) ? 'class="active"' : '' ?>>Blog</a><?php endif; ?>
         <?php foreach ($navPages as $np): ?>
           <a href="<?= e(url('s/' . $np['slug'])) ?>"><?= e($np['title']) ?></a>
         <?php endforeach; ?>
         <a href="<?= e(url('kontakt.php')) ?>" <?= $currentScript === 'kontakt.php' ? 'class="active"' : '' ?>>Kontakt</a>
       </nav>
       <div class="header-actions">
+        <a class="icon-btn" href="<?= e(url(Customer::isLoggedIn() ? 'moj-racun.php' : 'prijava.php')) ?>" aria-label="Moj račun" title="<?= Customer::isLoggedIn() ? 'Moj račun' : 'Prijava' ?>">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </a>
         <button class="icon-btn" data-toggle-search aria-label="Pretraga">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
         </button>

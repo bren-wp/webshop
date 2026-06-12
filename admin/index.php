@@ -92,10 +92,16 @@ require __DIR__ . '/templates/header.php';
     </div>
 
     <?php if (Djurdja::brandingRequired()): ?>
-    <div class="acard" style="background:linear-gradient(135deg,#f5f3ff,#fdf4ff);border-color:#ddd6fe">
-      <h3>💜 Besplatni plan</h3>
-      <p style="font-size:13px;color:#6b7280;margin:0">Trgovina prikazuje "Pokreće MojaĐurđa" u podnožju. Uklonite ga i otključajte više dokumenata nadogradnjom paketa.</p>
-      <a class="abtn sm" style="margin-top:10px" href="<?= e($upgradeUrl) ?>" target="_blank">Nadogradi →</a>
+    <div class="acard" style="color:#fff;background:linear-gradient(135deg,#6d28d9,#a855f7 60%,#ec4899);border:0;box-shadow:0 8px 24px rgba(124,58,237,.35)">
+      <h3 style="color:#fff">⚡ Otključajte puni potencijal trgovine</h3>
+      <ul style="font-size:12.5px;margin:8px 0 12px;padding-left:18px;line-height:2;opacity:.95">
+        <li><strong>Vaš brend, bez tuđeg potpisa</strong> — nestaje "Pokreće MojaĐurđa" iz podnožja i s računa</li>
+        <li><strong>Logo na računima</strong> — profesionalan dojam u svakom inboxu</li>
+        <li><strong>Premium teme, boje i vlastiti CSS</strong> — izgled kakav konkurencija nema</li>
+        <li><strong>Blog</strong> — SEO članci koji dovode kupce s Googlea</li>
+        <li><strong>Do 2800 dokumenata mjesečno</strong> — rastite bez brige o kvoti</li>
+      </ul>
+      <a class="abtn sm" style="background:#fff;color:#6d28d9;font-weight:800" href="<?= e($upgradeUrl) ?>" target="_blank">Pogledaj pakete ↗</a>
     </div>
     <?php endif; ?>
   </div>
