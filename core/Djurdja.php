@@ -108,7 +108,13 @@ class Djurdja
 
     public static function planName(): string
     {
-        return self::account()['plan']['name'] ?? 'Besplatni';
+        return self::account()['plan']['name'] ?? '— (nepoznato)';
+    }
+
+    /** Đurđa server još nema deployan shop modul (/shop/* rute vraćaju 404)? */
+    public static function shopModuleMissing(): bool
+    {
+        return Settings::get('djurdja_shop_module_missing') === '1';
     }
 
     /**
@@ -135,11 +141,15 @@ class Djurdja
                 if (!empty($acc['latestShopVersion'])) {
                     Settings::set('djurdja_latest_version', $acc['latestShopVersion']);
                 }
+                Settings::set('djurdja_shop_module_missing', '0');
             } catch (DjurdjaApiException $e) {
-                // Backend možda još nema /shop/account (stariji deploy) → koristi /me
+                // Backend još nema /shop/* rute (deploy nije odrađen) → koristi /me,
+                // OBAVEZNO očisti stari (možda mock) account keš da admin ne laže
                 if ($e->httpStatus === 404) {
                     $me = $client->me();
                     Settings::setJson('djurdja_company', $me);
+                    Settings::setJson('djurdja_account', []);
+                    Settings::set('djurdja_shop_module_missing', '1');
                 } else {
                     throw $e;
                 }

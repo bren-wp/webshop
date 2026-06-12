@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
     option1_value VARCHAR(60) NOT NULL DEFAULT '',
     option2_name VARCHAR(60) NULL,
     option2_value VARCHAR(60) NULL,
+    djurdja_variant_id VARCHAR(36) NULL UNIQUE,
     label VARCHAR(190) NOT NULL,
     sku VARCHAR(64) NULL,
     price DECIMAL(10,2) NULL,
@@ -115,6 +116,36 @@ CREATE TABLE IF NOT EXISTS pages (
     seo_title VARCHAR(190) NULL,
     seo_description VARCHAR(300) NULL,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_croatian_ci;
+
+CREATE TABLE IF NOT EXISTS customers (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(190) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    phone VARCHAR(40) NULL,
+    address VARCHAR(255) NULL,
+    city VARCHAR(100) NULL,
+    postal_code VARCHAR(20) NULL,
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    last_login_at DATETIME NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_croatian_ci;
+
+CREATE TABLE IF NOT EXISTS blog_posts (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(190) NOT NULL UNIQUE,
+    excerpt VARCHAR(500) NULL,
+    content MEDIUMTEXT NULL,
+    cover_image VARCHAR(255) NULL,
+    is_published TINYINT(1) NOT NULL DEFAULT 0,
+    published_at DATETIME NULL,
+    seo_title VARCHAR(190) NULL,
+    seo_description VARCHAR(300) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_bp_pub (is_published, published_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_croatian_ci;
 
 CREATE TABLE IF NOT EXISTS orders (
@@ -153,6 +184,9 @@ CREATE TABLE IF NOT EXISTS orders (
     note TEXT NULL,
     admin_note TEXT NULL,
     guest_token VARCHAR(64) NOT NULL,
+    customer_id INT UNSIGNED NULL,
+    withdrawal_requested_at DATETIME NULL,
+    withdrawal_reason VARCHAR(500) NULL,
     ip VARCHAR(45) NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -160,6 +194,7 @@ CREATE TABLE IF NOT EXISTS orders (
     INDEX idx_o_payment (payment_status),
     INDEX idx_o_fiscal_retry (fiscal_status, fiscal_next_retry_at),
     INDEX idx_o_guest (guest_token),
+    INDEX idx_o_customer (customer_id),
     INDEX idx_o_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_croatian_ci;
 
@@ -257,7 +292,7 @@ INSERT INTO payment_methods (code, name, description, is_active, sort_order, con
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 -- Verzija sheme (mora odgovarati Migrations::TARGET)
-INSERT INTO settings (k, v) VALUES ('schema_version', '2')
+INSERT INTO settings (k, v) VALUES ('schema_version', '3')
 ON DUPLICATE KEY UPDATE v = VALUES(v);
 
 -- ============================================================
@@ -267,5 +302,6 @@ INSERT INTO pages (slug, title, content, is_visible, in_nav, in_footer, sort_ord
 ('o-nama', 'O nama', '<p>Dobrodošli u našu web trgovinu! Podaci o tvrtki nalaze se u podnožju stranice i automatski se preuzimaju iz sustava MojaĐurđa.</p>', 1, 1, 1, 1),
 ('uvjeti-koristenja', 'Uvjeti korištenja', '<p>Ovdje unesite uvjete korištenja i opće uvjete poslovanja vaše trgovine. Uredite ovu stranicu u administraciji.</p>', 1, 0, 1, 2),
 ('zastita-privatnosti', 'Zaštita privatnosti', '<p>Ovdje unesite politiku privatnosti (GDPR). Podaci kupaca koriste se isključivo za obradu narudžbi.</p>', 1, 0, 1, 3),
-('dostava-i-povrat', 'Dostava i povrat', '<p>Ovdje opišite uvjete dostave, rokove isporuke i postupak povrata robe.</p>', 1, 0, 1, 4)
+('dostava-i-povrat', 'Dostava i povrat', '<p>Ovdje opišite uvjete dostave, rokove isporuke i postupak povrata robe.</p>', 1, 0, 1, 4),
+('pravo-na-popravak', 'Pravo na popravak', '<p>Sukladno izmjenama Zakona o zaštiti potrošača (od 31. srpnja 2026.), za određene kategorije proizvoda (hladnjaci, perilice, uređaji s baterijama, pametni telefoni, tableti i sl.) imate pravo na popravak. Popravak se ne smije odbiti samo zato što je proizvod ranije popravljao neovlašteni serviser ili vi sami.</p><p>Za ostvarivanje prava na popravak kontaktirajte nas putem podataka u podnožju stranice.</p><p><em>Vlasniče trgovine: prilagodite ovaj tekst svojoj ponudi — ako ne prodajete navedene kategorije robe, stranicu možete sakriti u administraciji (Stranice).</em></p>', 1, 0, 1, 5)
 ON DUPLICATE KEY UPDATE title = VALUES(title);

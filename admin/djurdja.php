@@ -45,7 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         Settings::set('force_test_mode', !empty($_POST['force_test_mode']) ? '1' : '0');
         Settings::set('business_space', mb_substr(trim((string) $_POST['business_space']) ?: 'WEBSHOP', 0, 20));
         Settings::set('cash_register', mb_substr(trim((string) $_POST['cash_register']) ?: '1', 0, 20));
-        Settings::set('shipping_vat_rate', (string) max(0, min(25, (float) $_POST['shipping_vat_rate'])));
         flash('success', 'Fiskalne postavke spremljene.');
     } elseif ($action === 'mock_off') {
         $cfgFile = SHOP_ROOT . '/config/config.php';
@@ -82,6 +81,15 @@ $statusInfo = [
 $pageTitle = 'Đurđa veza';
 require __DIR__ . '/templates/header.php';
 ?>
+<?php if (Djurdja::shopModuleMissing() && !$mockMode): ?>
+<div class="alert alert-error">
+  🚧 <strong>Đurđa server još nema shop modul.</strong> Osnovna veza radi (<code>/me</code> prolazi),
+  ali <code>/shop/account</code>, <code>/shop/catalog</code> i <code>/shop/heartbeat</code> vraćaju 404 —
+  zato sinkronizacija ne povlači artikle, plan/kvota su nepoznati i trgovina se ne pojavljuje u đurđi.
+  <strong>Rješenje:</strong> odradite deploy api_gatewaya po uputama u <code>docs/DEPLOY-DJURDJA.md</code>
+  (kopiranje <code>shop.js</code> + restart kontejnera), pa ovdje kliknite "Osvježi podatke".
+</div>
+<?php endif; ?>
 <?php if ($mockMode): ?>
 <div class="alert alert-warning" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
   <span>⚠ <strong>SIMULACIJA (MOCK)</strong> — đurđa API se simulira lokalno: artikli su probni, a JIR-ovi na računima <strong>nisu pravi</strong>. Za rad s vašim podacima isključite simulaciju.</span>
@@ -166,9 +174,9 @@ require __DIR__ . '/templates/header.php';
         <div class="aform-grid">
           <div><label class="al">Poslovni prostor</label><input class="ainput" name="business_space" value="<?= e(s('business_space', 'WEBSHOP')) ?>"></div>
           <div><label class="al">Naplatni uređaj</label><input class="ainput" name="cash_register" value="<?= e(s('cash_register', '1')) ?>"></div>
-          <div><label class="al">PDV na dostavu (%)</label><input class="ainput" type="number" step="0.01" name="shipping_vat_rate" value="<?= e(s('shipping_vat_rate', '25')) ?>"></div>
         </div>
-        <p class="sub" style="margin-top:12px">Oznake plaćanja prema Poreznoj su automatske: kartice (Stripe) = K, pouzeće = G.</p>
+        <p class="sub" style="margin-top:12px">Oznake plaćanja prema Poreznoj su automatske: kartice (Stripe) = K, pouzeće = G.<br>
+        <strong>Fiskaliziraju se isključivo artikli</strong> — dostava i naknada plaćanja nisu dio fiskalnog računa (obračunavate ih izvan trgovine).</p>
         <button class="abtn" style="margin-top:14px">💾 Spremi fiskalne postavke</button>
       </form>
     </div>

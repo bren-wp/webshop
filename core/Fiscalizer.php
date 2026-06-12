@@ -223,31 +223,32 @@ class Fiscalizer
     }
 
     /**
-     * Payload — PDV razrada po stopama stavki (uklj. dostavu/naknadu sa stopom 25%),
-     * ili nonTaxableAmount ako firma nije u sustavu PDV-a.
+     * Payload — fiskaliziraju se ISKLJUČIVO stavke narudžbe (artikli).
+     * Dostava i naknada plaćanja NE idu u fiskalizaciju — vlasnik ih
+     * obračunava izvan ovog sustava. PDV razrada po stopama stavki,
+     * ili nonTaxableAmount ako firma nije u sustavu PDV-a (đurđa to zna).
      */
     private static function buildPayload($db, array $order, array $company): array
     {
-        $totalAmount = (float) $order['total'];
+        $items = $db->fetchAll('SELECT vat_rate, total FROM order_items WHERE order_id = :o', [':o' => $order['id']]);
+        $itemsTotal = 0.0;
+        foreach ($items as $it) $itemsTotal += (float) $it['total'];
+        $itemsTotal = round($itemsTotal, 2);
+
         $payload = [
             'businessSpace' => Settings::get('business_space', 'WEBSHOP'),
             'cashRegister'  => Settings::get('cash_register', '1'),
-            'totalAmount'   => $totalAmount,
+            'totalAmount'   => $itemsTotal,
             'currency'      => 'EUR',
             'paymentMethod' => self::finaCode($order['payment_method']),
-            'note'          => 'Narudžba ' . $order['order_number'] . ' (web shop)',
+            'note'          => 'Narudžba ' . $order['order_number'] . ' (web shop, bez dostave)',
         ];
 
         if (!empty($company['inVatSystem'])) {
             $byRate = [];
-            foreach ($db->fetchAll('SELECT vat_rate, total FROM order_items WHERE order_id = :o', [':o' => $order['id']]) as $it) {
+            foreach ($items as $it) {
                 $rate = round((float) $it['vat_rate'], 2);
                 $byRate[(string) $rate] = ($byRate[(string) $rate] ?? 0) + (float) $it['total'];
-            }
-            $extra = (float) $order['shipping_cost'] + (float) $order['payment_fee'];
-            if ($extra > 0) {
-                $rate = round((float) Settings::get('shipping_vat_rate', '25'), 2);
-                $byRate[(string) $rate] = ($byRate[(string) $rate] ?? 0) + $extra;
             }
             $breakdown = [];
             foreach ($byRate as $rateStr => $gross) {
@@ -259,7 +260,7 @@ class Fiscalizer
             $payload['vatBreakdown'] = $breakdown;
         } else {
             $payload['vatBreakdown'] = [];
-            $payload['nonTaxableAmount'] = $totalAmount;
+            $payload['nonTaxableAmount'] = $itemsTotal;
         }
         return $payload;
     }

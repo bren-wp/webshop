@@ -124,8 +124,11 @@ class Mailer
         $company = Djurdja::company();
         $inVat = !empty($company['inVatSystem']);
 
+        // Fiskalizirani račun sadrži SAMO stavke — dostava/naknada se obračunavaju
+        // izvan ovog sustava (vidi Fiscalizer::buildPayload).
         $rows = '';
         $byRate = [];
+        $itemsTotal = 0.0;
         foreach ($items as $it) {
             $nm = $it['name'] . (!empty($it['variant_label']) ? ' — ' . $it['variant_label'] : '');
             $rows .= '<tr><td style="padding:6px 0;border-bottom:1px solid #f3f4f6">' . e($nm) . '</td>'
@@ -134,18 +137,10 @@ class Mailer
                 . '<td align="right" style="padding:6px 0;border-bottom:1px solid #f3f4f6;white-space:nowrap">' . number_format((float) $it['total'], 2, ',', '.') . '</td></tr>';
             $r = (string) round((float) $it['vat_rate'], 2);
             $byRate[$r] = ($byRate[$r] ?? 0) + (float) $it['total'];
+            $itemsTotal += (float) $it['total'];
         }
+        $itemsTotal = round($itemsTotal, 2);
         $extra = (float) $order['shipping_cost'] + (float) $order['payment_fee'];
-        if ($extra > 0) {
-            $r = (string) round((float) s('shipping_vat_rate', '25'), 2);
-            $byRate[$r] = ($byRate[$r] ?? 0) + $extra;
-        }
-        if ((float) $order['shipping_cost'] > 0) {
-            $rows .= '<tr><td style="padding:6px 0;color:#6b7280">Dostava</td><td align="right">1</td><td align="right">' . number_format((float) $order['shipping_cost'], 2, ',', '.') . '</td><td align="right">' . number_format((float) $order['shipping_cost'], 2, ',', '.') . '</td></tr>';
-        }
-        if ((float) $order['payment_fee'] > 0) {
-            $rows .= '<tr><td style="padding:6px 0;color:#6b7280">Naknada plaćanja</td><td align="right">1</td><td align="right">' . number_format((float) $order['payment_fee'], 2, ',', '.') . '</td><td align="right">' . number_format((float) $order['payment_fee'], 2, ',', '.') . '</td></tr>';
-        }
 
         $vatTable = '';
         if ($inVat) {
@@ -188,8 +183,12 @@ class Mailer
             . '<tr style="font-size:11px;text-transform:uppercase;color:#9ca3af"><td>Artikl</td><td align="right">Kol.</td><td align="right">Cijena</td><td align="right">Iznos</td></tr>'
             . $rows
             . '<tr><td colspan="3" style="padding:12px 0;font-size:16px;border-top:2px solid #111"><strong>UKUPNO</strong></td>'
-            . '<td align="right" style="padding:12px 0;font-size:16px;border-top:2px solid #111;white-space:nowrap"><strong>' . fmt_price($order['total']) . '</strong></td></tr></table>'
+            . '<td align="right" style="padding:12px 0;font-size:16px;border-top:2px solid #111;white-space:nowrap"><strong>' . fmt_price($itemsTotal) . '</strong></td></tr></table>'
             . $vatTable
+            . ($extra > 0
+                ? '<p style="color:#6b7280;font-size:12px">Napomena: dostava' . ((float) $order['payment_fee'] > 0 ? ' i naknada plaćanja' : '')
+                  . ' (' . fmt_price($extra) . ') nije predmet ovog računa i obračunava se zasebno.</p>'
+                : '')
             . '<div style="border:1px dashed #9ca3af;border-radius:8px;padding:12px;font-size:11.5px;color:#374151;word-break:break-all;margin:14px 0">'
             . '<strong>FISKALNI PODACI</strong><br>JIR: ' . e($order['fiscal_jir']) . '<br>ZKI: ' . e($order['fiscal_zki'])
             . ($order['fiscal_qr'] ? '<br>Provjera računa: <a href="' . e($order['fiscal_qr']) . '">' . e($order['fiscal_qr']) . '</a>' : '')

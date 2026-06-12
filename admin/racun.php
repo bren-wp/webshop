@@ -12,17 +12,16 @@ $items = $db->fetchAll('SELECT * FROM order_items WHERE order_id = :o', [':o' =>
 $company = Djurdja::company();
 $inVat = !empty($company['inVatSystem']);
 
-// PDV rekapitulacija po stopama (iz bruto iznosa)
+// PDV rekapitulacija po stopama (iz bruto iznosa) — SAMO stavke.
+// Dostava/naknada NISU predmet fiskalizacije ni ovog računa.
 $byRate = [];
+$itemsTotal = 0.0;
 foreach ($items as $it) {
     $r = (string) round((float) $it['vat_rate'], 2);
     $byRate[$r] = ($byRate[$r] ?? 0) + (float) $it['total'];
+    $itemsTotal += (float) $it['total'];
 }
-$extra = (float) $order['shipping_cost'] + (float) $order['payment_fee'];
-if ($extra > 0) {
-    $r = (string) round((float) s('shipping_vat_rate', '25'), 2);
-    $byRate[$r] = ($byRate[$r] ?? 0) + $extra;
-}
+$itemsTotal = round($itemsTotal, 2);
 ?><!doctype html>
 <html lang="hr">
 <head>
@@ -73,9 +72,7 @@ hr{border:0;border-top:1px dashed #999}
   <?php foreach ($items as $it): ?>
     <tr><td><?= e($it['name']) ?><?= !empty($it['variant_label']) ? '<br><span class="muted">' . e($it['variant_label']) . '</span>' : '' ?></td><td class="num"><?= (int) $it['quantity'] ?></td><td class="num"><?= number_format((float) $it['unit_price'], 2, ',', '.') ?></td><td class="num"><?= number_format((float) $it['total'], 2, ',', '.') ?></td></tr>
   <?php endforeach; ?>
-  <?php if ((float) $order['shipping_cost'] > 0): ?><tr><td>Dostava</td><td class="num">1</td><td class="num"><?= number_format((float) $order['shipping_cost'], 2, ',', '.') ?></td><td class="num"><?= number_format((float) $order['shipping_cost'], 2, ',', '.') ?></td></tr><?php endif; ?>
-  <?php if ((float) $order['payment_fee'] > 0): ?><tr><td>Naknada plaćanja</td><td class="num">1</td><td class="num"><?= number_format((float) $order['payment_fee'], 2, ',', '.') ?></td><td class="num"><?= number_format((float) $order['payment_fee'], 2, ',', '.') ?></td></tr><?php endif; ?>
-  <tr class="tot"><td colspan="3">UKUPNO</td><td class="num"><?= number_format((float) $order['total'], 2, ',', '.') ?> €</td></tr>
+  <tr class="tot"><td colspan="3">UKUPNO</td><td class="num"><?= number_format($itemsTotal, 2, ',', '.') ?> €</td></tr>
   </tbody>
 </table>
 
@@ -93,6 +90,12 @@ hr{border:0;border-top:1px dashed #999}
 </table>
 <?php else: ?>
 <p class="muted">PDV nije obračunat — prodavatelj nije u sustavu PDV-a (čl. 90. Zakona o PDV-u).</p>
+<?php endif; ?>
+
+<?php if ((float) $order['shipping_cost'] > 0 || (float) $order['payment_fee'] > 0): ?>
+<p class="muted">Napomena: dostava<?= (float) $order['payment_fee'] > 0 ? ' i naknada plaćanja' : '' ?>
+(<?= number_format((float) $order['shipping_cost'] + (float) $order['payment_fee'], 2, ',', '.') ?> €)
+nije predmet ovog računa i obračunava se zasebno.</p>
 <?php endif; ?>
 
 <div class="fbox">
