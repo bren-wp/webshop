@@ -141,18 +141,70 @@ class Sync
             'is_orphaned' => 0,
             'synced_at'   => date('Y-m-d H:i:s'),
         ];
+        // Vidljivost u trgovini određuje ĐURĐA (Web trgovina → Artikli);
+        // stari backend bez flaga ne šalje ključ → vidljivost se ne dira.
+        if (array_key_exists('showInWebshop', $p)) {
+            $core['is_visible'] = !empty($p['showInWebshop']) ? 1 : 0;
+        }
 
         $existing = $db->fetch('SELECT id FROM products WHERE djurdja_id = :d', [':d' => $djId]);
         if ($existing) {
             $db->update('products', $core, 'id = :id', [':id' => $existing['id']]);
             $stats['prods_upd']++;
-            return;
+            $pid = (int) $existing['id'];
+        } else {
+            $core['djurdja_id'] = $djId;
+            $core['slug'] = self::uniqueSlug($db, 'products', slugify($name));
+            if (!isset($core['is_visible'])) $core['is_visible'] = 1;
+            $pid = (int) $db->insert('products', $core);
+            $stats['prods_new']++;
         }
-        $core['djurdja_id'] = $djId;
-        $core['slug'] = self::uniqueSlug($db, 'products', slugify($name));
-        $core['is_visible'] = 1;
-        $db->insert('products', $core);
-        $stats['prods_new']++;
+
+        // Varijante: đurđa je master. Ključ prisutan (i prazan) = autoritativno stanje.
+        if (array_key_exists('variants', $p) && is_array($p['variants'])) {
+            self::syncVariants($db, $pid, $p['variants']);
+        }
+    }
+
+    /** Zrcali varijante iz đurđe u lokalnu product_variants (po djurdja_variant_id). */
+    private static function syncVariants(Database $db, int $productId, array $variants): void
+    {
+        $keep = [];
+        $sort = 0;
+        foreach ($variants as $v) {
+            $djvId = (string) ($v['id'] ?? '');
+            $o1 = mb_substr(trim((string) ($v['option1Value'] ?? '')), 0, 60);
+            if ($djvId === '' || $o1 === '') continue;
+            $o2 = mb_substr(trim((string) ($v['option2Value'] ?? '')), 0, 60);
+            $data = [
+                'product_id'    => $productId,
+                'option1_name'  => mb_substr((string) ($v['option1Name'] ?? 'Opcija'), 0, 60) ?: 'Opcija',
+                'option1_value' => $o1,
+                'option2_name'  => $o2 !== '' ? (mb_substr((string) ($v['option2Name'] ?? ''), 0, 60) ?: null) : null,
+                'option2_value' => $o2 !== '' ? $o2 : null,
+                'label'         => mb_substr($o1 . ($o2 !== '' ? ' / ' . $o2 : ''), 0, 190),
+                'sku'           => $v['sku'] ?? null,
+                'price'         => $v['price'] === null || $v['price'] === '' ? null : round((float) $v['price'], 2),
+                'stock_qty'     => $v['stock'] === null || $v['stock'] === '' ? null : round((float) $v['stock'], 2),
+                'is_active'     => 1,
+                'sort_order'    => $sort++,
+            ];
+            $exId = $db->fetchColumn('SELECT id FROM product_variants WHERE djurdja_variant_id = :d', [':d' => $djvId]);
+            if ($exId) {
+                $db->update('product_variants', $data, 'id = :id', [':id' => (int) $exId]);
+                $keep[] = (int) $exId;
+            } else {
+                $data['djurdja_variant_id'] = $djvId;
+                $keep[] = (int) $db->insert('product_variants', $data);
+            }
+        }
+        // Sve što đurđa više ne šalje (uključujući stare lokalne varijante) — briši
+        if ($keep) {
+            $ph = implode(',', array_fill(0, count($keep), '?'));
+            $db->query("DELETE FROM product_variants WHERE product_id = ? AND id NOT IN ($ph)", array_merge([$productId], $keep));
+        } else {
+            $db->query('DELETE FROM product_variants WHERE product_id = ?', [$productId]);
+        }
     }
 
     private static function uniqueSlug(Database $db, string $table, string $base): string

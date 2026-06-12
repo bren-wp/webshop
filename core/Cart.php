@@ -122,6 +122,7 @@ class Cart
             $row['qty'] = (int) $qty;
             $row['variant_id'] = $vid ?: null;
             $row['variant_label'] = $variant['label'] ?? null;
+            $row['djurdja_variant_id'] = $variant['djurdja_variant_id'] ?? null;
             $row['variant_stock'] = ($variant && $variant['stock_qty'] !== null) ? (float) $variant['stock_qty'] : null;
             $row['price'] = Variants::price($product, $variant);
             $row['line_total'] = round($row['price'] * (int) $qty, 2);

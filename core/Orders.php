@@ -110,6 +110,21 @@ class Orders
             error_log('[Orders::create] mail: ' . $e->getMessage());
         }
 
+        // Javi đurđi (master) prodaju po varijantama — best-effort
+        $sales = [];
+        foreach ($items as $it) {
+            if (!empty($it['djurdja_variant_id']) && $it['variant_stock'] !== null) {
+                $sales[] = ['variantId' => $it['djurdja_variant_id'], 'qty' => (int) $it['qty']];
+            }
+        }
+        if ($sales) {
+            try {
+                Djurdja::client()?->variantSale($sales);
+            } catch (Throwable $e) {
+                error_log('[Orders::create] variantSale: ' . $e->getMessage());
+            }
+        }
+
         return $order;
     }
 

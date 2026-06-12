@@ -100,6 +100,12 @@ class DjurdjaClient
         return $this->call('POST', '/shop/heartbeat', $payload);
     }
 
+    /** Javi đurđi prodaju po varijantama (skida zalihu varijante na masteru). */
+    public function variantSale(array $sales): array
+    {
+        return $this->call('POST', '/shop/variant-sale', ['sales' => $sales]);
+    }
+
     public function fiscalize(array $payload): array
     {
         return $this->call('POST', '/fiscalize', $payload);
@@ -261,6 +267,9 @@ class DjurdjaClient
             case 'POST /shop/heartbeat':
                 return ['ok' => true, 'status' => 'active'];
 
+            case 'POST /shop/variant-sale':
+                return ['ok' => true, 'updated' => count($body['sales'] ?? [])];
+
             case 'POST /fiscalize':
                 $n = (int) $this->mockSetting('mock_fiscal_counter', '0') + 1;
                 $this->mockSetting('mock_fiscal_counter', (string) $n, true);
@@ -316,8 +325,13 @@ class DjurdjaClient
             ['id' => 'mock-prod-2', 'categoryId' => 'mock-cat-1', 'name' => 'Filter kava 500 g — etiopska', 'description' => 'Single origin, citrusne note.', 'priceMpc' => 12.50, 'vatRate' => 25.00, 'unit' => 'kom', 'barcode' => '3850001000026', 'isService' => false, 'stock' => 18],
             ['id' => 'mock-prod-3', 'categoryId' => 'mock-cat-2', 'name' => 'Domaći medenjaci 300 g', 'description' => 'Ručno rađeni medenjaci s pravim medom.', 'priceMpc' => 7.90, 'vatRate' => 5.00, 'unit' => 'kom', 'barcode' => null, 'isService' => false, 'stock' => 25],
             ['id' => 'mock-prod-4', 'categoryId' => 'mock-cat-2', 'name' => 'Čokoladna torta (cijela)', 'description' => 'Za 12 osoba, narudžba 2 dana unaprijed.', 'priceMpc' => 35.00, 'vatRate' => 13.00, 'unit' => 'kom', 'barcode' => null, 'isService' => false, 'stock' => null],
-            ['id' => 'mock-prod-5', 'categoryId' => 'mock-cat-3', 'name' => 'Poklon paket "Jutro"', 'description' => 'Kava 250 g + šalica + medenjaci.', 'priceMpc' => 24.90, 'vatRate' => 25.00, 'unit' => 'kom', 'barcode' => null, 'isService' => false, 'stock' => 10],
-            ['id' => 'mock-prod-6', 'categoryId' => 'mock-cat-3', 'name' => 'Poklon bon 50 €', 'description' => 'Vrijedi 12 mjeseci od kupnje.', 'priceMpc' => 50.00, 'vatRate' => 0.00, 'unit' => 'kom', 'barcode' => null, 'isService' => true, 'stock' => null],
+            ['id' => 'mock-prod-5', 'categoryId' => 'mock-cat-3', 'name' => 'Poklon paket "Jutro"', 'description' => 'Kava 250 g + šalica + medenjaci.', 'priceMpc' => 24.90, 'vatRate' => 25.00, 'unit' => 'kom', 'barcode' => null, 'isService' => false, 'stock' => 10,
+             'showInWebshop' => true,
+             'variants' => [
+                 ['id' => 'mock-var-1', 'option1Name' => 'Veličina', 'option1Value' => 'Mali', 'option2Name' => null, 'option2Value' => null, 'sku' => 'PJ-S', 'price' => null, 'stock' => 4],
+                 ['id' => 'mock-var-2', 'option1Name' => 'Veličina', 'option1Value' => 'Veliki', 'option2Name' => null, 'option2Value' => null, 'sku' => 'PJ-L', 'price' => 34.90, 'stock' => 6],
+             ]],
+            ['id' => 'mock-prod-6', 'categoryId' => 'mock-cat-3', 'name' => 'Poklon bon 50 €', 'description' => 'Vrijedi 12 mjeseci od kupnje.', 'priceMpc' => 50.00, 'vatRate' => 0.00, 'unit' => 'kom', 'barcode' => null, 'isService' => true, 'stock' => null, 'showInWebshop' => false],
             ['id' => 'mock-prod-7', 'categoryId' => 'mock-cat-4', 'name' => 'Radionica pripreme kave (2 h)', 'description' => 'Mala grupa, max 6 polaznika.', 'priceMpc' => 45.00, 'vatRate' => 25.00, 'unit' => 'kom', 'barcode' => null, 'isService' => true, 'stock' => null],
             ['id' => 'mock-prod-8', 'categoryId' => 'mock-cat-1', 'name' => 'Cold brew boca 0,75 l', 'description' => 'Hladno ekstrahirana, 24 h.', 'priceMpc' => 9.90, 'vatRate' => 25.00, 'unit' => 'kom', 'barcode' => '3850001000033', 'isService' => false, 'stock' => 0],
         ];

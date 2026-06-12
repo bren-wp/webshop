@@ -14,11 +14,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'save';
 
     if ($action === 'save') {
+        // Vidljivost se NE sprema ovdje — određuje je đurđa (Web trgovina → Artikli)
         $db->update('products', [
             'description'     => trim((string) $_POST['description']) ?: null,
             'seo_title'       => mb_substr(trim((string) $_POST['seo_title']), 0, 190) ?: null,
             'seo_description' => mb_substr(trim((string) $_POST['seo_description']), 0, 300) ?: null,
-            'is_visible'      => !empty($_POST['is_visible']) ? 1 : 0,
             'is_featured'     => !empty($_POST['is_featured']) ? 1 : 0,
         ], 'id = :id', [':id' => $id]);
         flash('success', 'Spremljeno.');
@@ -50,10 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             if ($count) flash('success', "Učitano slika: $count");
         }
-    } elseif ($action === 'variants') {
-        $rows = is_array($_POST['vr'] ?? null) ? $_POST['vr'] : [];
-        Variants::saveSet($id, (string) ($_POST['axis1_name'] ?? ''), (string) ($_POST['axis2_name'] ?? ''), $rows);
-        flash('success', 'Varijante spremljene.');
     } elseif ($action === 'img_delete') {
         $img = $db->fetch('SELECT * FROM product_images WHERE id = :i AND product_id = :p', [':i' => (int) $_POST['img_id'], ':p' => $id]);
         if ($img) {
@@ -116,7 +112,10 @@ require __DIR__ . '/templates/header.php';
   <div style="display:grid;gap:20px">
     <div class="acard">
       <h3>Vidljivost</h3>
-      <label class="acheck"><input type="checkbox" name="is_visible" <?= $p['is_visible'] ? 'checked' : '' ?>> Prikaži u trgovini</label>
+      <p style="font-size:13px;margin:0 0 6px">
+        <span class="badge <?= $p['is_visible'] ? 'green' : 'gray' ?>"><?= $p['is_visible'] ? '● Vidljiv u trgovini' : '● Skriven' ?></span>
+      </p>
+      <p class="sub">Vidljivost se određuje u <strong>MojaĐurđa → Web trgovina → Artikli</strong> i automatski sinkronizira (đurđa je izvor istine).</p>
       <label class="acheck"><input type="checkbox" name="is_featured" <?= $p['is_featured'] ? 'checked' : '' ?>> Istaknut na naslovnici ★</label>
       <button class="abtn" style="width:100%;margin-top:10px;justify-content:center">💾 Spremi sve</button>
       <a class="abtn ghost sm" style="width:100%;margin-top:8px;justify-content:center" target="_blank" href="<?= e(url('p/' . $p['slug'])) ?>">Pogledaj na webu ↗</a>
@@ -133,56 +132,28 @@ require __DIR__ . '/templates/header.php';
 </form>
 
 <div class="acard" id="variants" style="margin-top:20px">
-  <h3>Varijante — veličine, boje… <span class="badge violet">lokalno u trgovini</span></h3>
-  <p class="sub">Đurđa vodi ovaj artikl kao jednu stavku (jedna cijena i ukupna zaliha). Varijante su dodatak trgovine:
-    kupac bira opciju, a vi po želji odredite drugačiju cijenu (prazno = osnovna <?= fmt_price($p['price']) ?>),
-    vlastitu zalihu po opciji (prazno = ne prati se) i SKU. Na računu se varijanta dodaje u opis stavke.</p>
-  <form method="post">
-    <?= csrf_field() ?><input type="hidden" name="action" value="variants">
-    <div class="aform-grid" style="margin-bottom:10px">
-      <div><label class="al">Naziv 1. opcije (npr. Veličina)</label><input class="ainput" name="axis1_name" maxlength="60" value="<?= e($axis1Name) ?>" placeholder="Veličina"></div>
-      <div><label class="al">Naziv 2. opcije (npr. Boja — opcionalno)</label><input class="ainput" name="axis2_name" maxlength="60" value="<?= e($axis2Name) ?>" placeholder="Boja"></div>
-    </div>
-    <table class="atable" id="var-table" style="font-size:13px">
-      <thead><tr><th>1. opcija *</th><th>2. opcija</th><th>SKU</th><th>Cijena €</th><th>Zaliha</th><th>Aktivna</th><th></th></tr></thead>
+  <h3>Varijante — veličine, boje… <span class="badge violet">izvor: đurđa</span></h3>
+  <p class="sub">Varijante se uređuju u <strong>MojaĐurđa → Web trgovina → Artikli → Varijante</strong> i automatski
+    sinkroniziraju u trgovinu (najkasnije 15 min, ili odmah preko Sinkronizacije). Prodaja u trgovini javlja se
+    đurđi i skida zalihu varijante na izvoru.</p>
+  <?php if (!$variants): ?>
+    <div class="alert alert-info" style="font-size:13px">Ovaj artikl nema varijanti. Dodajte ih u đurđi ako artikl dolazi u više veličina/boja.</div>
+  <?php else: ?>
+    <table class="atable" style="font-size:13px">
+      <thead><tr><th>Varijanta</th><th>SKU</th><th class="num">Cijena</th><th class="num">Zaliha</th><th>Status</th></tr></thead>
       <tbody>
-        <?php foreach ($variants as $i => $v): ?>
+        <?php foreach ($variants as $v): ?>
         <tr>
-          <td><input type="hidden" name="vr[<?= $i ?>][id]" value="<?= (int) $v['id'] ?>"><input class="ainput" name="vr[<?= $i ?>][option1_value]" maxlength="60" value="<?= e($v['option1_value']) ?>" required></td>
-          <td><input class="ainput" name="vr[<?= $i ?>][option2_value]" maxlength="60" value="<?= e($v['option2_value'] ?? '') ?>"></td>
-          <td><input class="ainput" name="vr[<?= $i ?>][sku]" maxlength="64" value="<?= e($v['sku'] ?? '') ?>"></td>
-          <td><input class="ainput" name="vr[<?= $i ?>][price]" inputmode="decimal" value="<?= $v['price'] !== null ? e(number_format((float) $v['price'], 2, '.', '')) : '' ?>" placeholder="<?= e(number_format((float) $p['price'], 2, '.', '')) ?>" style="max-width:110px"></td>
-          <td><input class="ainput" name="vr[<?= $i ?>][stock_qty]" inputmode="numeric" value="<?= $v['stock_qty'] !== null ? e(rtrim(rtrim(number_format((float) $v['stock_qty'], 2, '.', ''), '0'), '.')) : '' ?>" placeholder="∞" style="max-width:90px"></td>
-          <td style="text-align:center"><input type="checkbox" name="vr[<?= $i ?>][is_active]" value="1" <?= $v['is_active'] ? 'checked' : '' ?>></td>
-          <td><button type="button" class="abtn danger sm" onclick="this.closest('tr').remove()">✕</button></td>
+          <td><strong><?= e($v['label']) ?></strong></td>
+          <td><?= e($v['sku'] ?? '—') ?></td>
+          <td class="num"><?= $v['price'] !== null ? fmt_price($v['price']) : fmt_price($p['price']) . ' <small style="color:#9ca3af">(osnovna)</small>' ?></td>
+          <td class="num"><?= $v['stock_qty'] !== null ? (float) $v['stock_qty'] . ' kom' : '∞ (ne prati se)' ?></td>
+          <td><span class="badge <?= $v['is_active'] ? 'green' : 'gray' ?>"><?= $v['is_active'] ? 'aktivna' : 'isključena' ?></span></td>
         </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <button type="button" class="abtn ghost sm" id="var-add">+ Dodaj varijantu</button>
-      <button class="abtn sm">💾 Spremi varijante</button>
-    </div>
-  </form>
-  <script>
-  (function () {
-    var idx = <?= count($variants) ?>;
-    document.getElementById('var-add').addEventListener('click', function () {
-      var tb = document.querySelector('#var-table tbody');
-      var tr = document.createElement('tr');
-      tr.innerHTML =
-        '<td><input type="hidden" name="vr[' + idx + '][id]" value="0"><input class="ainput" name="vr[' + idx + '][option1_value]" maxlength="60" required></td>' +
-        '<td><input class="ainput" name="vr[' + idx + '][option2_value]" maxlength="60"></td>' +
-        '<td><input class="ainput" name="vr[' + idx + '][sku]" maxlength="64"></td>' +
-        '<td><input class="ainput" name="vr[' + idx + '][price]" inputmode="decimal" placeholder="<?= e(number_format((float) $p['price'], 2, '.', '')) ?>" style="max-width:110px"></td>' +
-        '<td><input class="ainput" name="vr[' + idx + '][stock_qty]" inputmode="numeric" placeholder="∞" style="max-width:90px"></td>' +
-        '<td style="text-align:center"><input type="checkbox" name="vr[' + idx + '][is_active]" value="1" checked></td>' +
-        '<td><button type="button" class="abtn danger sm" onclick="this.closest(\'tr\').remove()">✕</button></td>';
-      tb.appendChild(tr);
-      idx++;
-    });
-  })();
-  </script>
+  <?php endif; ?>
 </div>
 
 <?php if ($images): ?>
