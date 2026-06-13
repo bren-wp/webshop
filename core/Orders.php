@@ -116,18 +116,22 @@ class Orders
             error_log('[Orders::create] mail: ' . $e->getMessage());
         }
 
-        // Javi đurđi (master) prodaju po varijantama — best-effort
-        $sales = [];
+        // Javi đurđi (master) prodaju → skida ukupnu zalihu s web skladišta +
+        // varijantu. Đurđa preskače usluge i firme bez vođenja skladišta. Best-effort.
+        $saleItems = [];
         foreach ($items as $it) {
-            if (!empty($it['djurdja_variant_id']) && $it['variant_stock'] !== null) {
-                $sales[] = ['variantId' => $it['djurdja_variant_id'], 'qty' => (int) $it['qty']];
-            }
+            if (empty($it['djurdja_id'])) continue;
+            $saleItems[] = [
+                'productId' => $it['djurdja_id'],
+                'qty'       => (int) $it['qty'],
+                'variantId' => $it['djurdja_variant_id'] ?? null,
+            ];
         }
-        if ($sales) {
+        if ($saleItems) {
             try {
-                Djurdja::client()?->variantSale($sales);
+                Djurdja::client()?->stockSale($saleItems);
             } catch (Throwable $e) {
-                error_log('[Orders::create] variantSale: ' . $e->getMessage());
+                error_log('[Orders::create] stockSale: ' . $e->getMessage());
             }
         }
 

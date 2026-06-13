@@ -106,6 +106,15 @@ class DjurdjaClient
         return $this->call('POST', '/shop/variant-sale', ['sales' => $sales]);
     }
 
+    /**
+     * Javi đurđi web prodaju → skida UKUPNU zalihu (web skladište) + varijantu.
+     * @param array $items [{productId, qty, variantId?}]
+     */
+    public function stockSale(array $items): array
+    {
+        return $this->call('POST', '/shop/stock-sale', ['items' => $items]);
+    }
+
     /** Promo traka — centralizirani sadržaj reklame (free plan). */
     public function promo(): array
     {
@@ -278,6 +287,9 @@ class DjurdjaClient
             case 'POST /shop/variant-sale':
                 return ['ok' => true, 'updated' => count($body['sales'] ?? [])];
 
+            case 'POST /shop/stock-sale':
+                return ['ok' => true, 'stockUpdated' => count($body['items'] ?? []), 'variantsUpdated' => 0];
+
             case 'GET /shop/promo':
                 return ['enabled' => true, 'text' => 'MOCK promo: MojaĐurđa — blagajna, e-računi i besplatna web trgovina ✨', 'url' => 'https://mojadjurdja.com/?utm_source=webshop&utm_medium=promobar'];
 
@@ -347,11 +359,13 @@ class DjurdjaClient
             ['id' => 'mock-prod-8', 'categoryId' => 'mock-cat-1', 'name' => 'Cold brew boca 0,75 l', 'description' => 'Hladno ekstrahirana, 24 h.', 'priceMpc' => 9.90, 'vatRate' => 25.00, 'unit' => 'kom', 'barcode' => '3850001000033', 'isService' => false, 'stock' => 0],
         ];
         return [
-            'categories' => $cats,
-            'products'   => $prods,
-            'total'      => count($prods),
-            'hasMore'    => false,
-            'syncedAt'   => date('c'),
+            'categories'   => $cats,
+            'products'     => $prods,
+            'total'        => count($prods),
+            'hasMore'      => false,
+            'trackStock'   => true,
+            'allowNegative' => false,
+            'syncedAt'     => date('c'),
         ];
     }
 }

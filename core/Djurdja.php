@@ -194,6 +194,18 @@ class Djurdja
         return !self::brandingRequired();
     }
 
+    /** Dopušta li firma prodaju u minus (negativnu zalihu)? Default: ne. */
+    public static function allowNegativeStock(): bool
+    {
+        return Settings::get('djurdja_allow_negative', '0') === '1';
+    }
+
+    /** Vodi li firma skladište uopće? Default: da. */
+    public static function tracksStock(): bool
+    {
+        return Settings::get('djurdja_track_stock', '1') === '1';
+    }
+
     /** Zaglavlje računa (vlasnik ga definira u đurđa profilu — izvor istine). */
     public static function invoiceHeader(): string
     {

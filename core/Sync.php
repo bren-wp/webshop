@@ -35,6 +35,14 @@ class Sync
                 $batch = $client->catalog($since, $offset);
                 $syncedAtResp = $batch['syncedAt'] ?? $syncedAtResp;
 
+                // Postavke zalihe firme (iz đurđe) — utječu na "Rasprodano" logiku
+                if (array_key_exists('allowNegative', $batch)) {
+                    Settings::set('djurdja_allow_negative', !empty($batch['allowNegative']) ? '1' : '0');
+                }
+                if (array_key_exists('trackStock', $batch)) {
+                    Settings::set('djurdja_track_stock', !empty($batch['trackStock']) ? '1' : '0');
+                }
+
                 if (!$catsDone) {
                     foreach (($batch['categories'] ?? []) as $cat) {
                         self::upsertCategory($db, $cat, $stats);

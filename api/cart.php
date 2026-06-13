@@ -27,13 +27,14 @@ switch ($action) {
 
         $qty = max(1, $qty);
         $inCart = (int) (Cart::items()[Cart::key($productId, $variantId)] ?? 0);
+        $allowNeg = Djurdja::allowNegativeStock(); // firma dopušta minus → bez ograničenja zalihe
 
         if (Variants::productHas($productId)) {
             $variant = Variants::resolve($productId, $variantId);
             if (!$variant) {
                 json_out(['ok' => false, 'error' => 'Odaberite opciju proizvoda (npr. veličinu ili boju).'], 422);
             }
-            if ($variant['stock_qty'] !== null && (float) $variant['stock_qty'] < $inCart + $qty) {
+            if (!$allowNeg && $variant['stock_qty'] !== null && (float) $variant['stock_qty'] < $inCart + $qty) {
                 $avail = max(0, (int) $variant['stock_qty'] - $inCart);
                 json_out(['ok' => false, 'error' => $avail > 0
                     ? "Na zalihi je još samo $avail kom ove opcije."
@@ -41,7 +42,7 @@ switch ($action) {
             }
         } else {
             $variantId = 0;
-            if ((int) $product['track_stock'] === 1 && $product['stock_qty'] !== null
+            if (!$allowNeg && (int) $product['track_stock'] === 1 && $product['stock_qty'] !== null
                 && (float) $product['stock_qty'] < $inCart + $qty) {
                 $avail = max(0, (int) $product['stock_qty'] - $inCart);
                 json_out(['ok' => false, 'error' => $avail > 0

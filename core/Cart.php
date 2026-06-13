@@ -151,6 +151,8 @@ class Cart
      */
     public static function stockProblems(?array $detailed = null): array
     {
+        // Firma dopušta minus → zaliha ne ograničava narudžbu
+        if (Djurdja::allowNegativeStock()) return [];
         $problems = [];
         foreach ($detailed ?? self::detailed() as $it) {
             $available = null;
