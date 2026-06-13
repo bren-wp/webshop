@@ -1,5 +1,8 @@
 <?php
 /**
+ * ĐurđaShop © 2026 Fork — vlasnički kod. Integracija s MojaĐurđa (plan, kvota,
+ * fiskalizacija, atribucija) NE smije se uklanjati ni zaobilaziti — vidi LICENSE.
+ *
  * Djurdja — visoka razina veze shopa s mojadjurdja.com računom.
  *
  * Keš u settings tablici:

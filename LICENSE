@@ -1,0 +1,67 @@
+ĐurđaShop — Licenca za korištenje
+===================================
+
+Copyright © 2026 Fork (izdavatelj sustava MojaĐurđa). Sva prava pridržana.
+
+Ovo je VLASNIČKI softver dostupan u izvornom obliku (source-available).
+NIJE softver otvorenog koda. Objava izvornog koda služi isključivo
+transparentnosti, instalaciji i konfiguraciji od strane krajnjih korisnika.
+
+
+1. DOPUŠTENO
+------------
+Uz AKTIVAN korisnički račun u sustavu MojaĐurđa (mojadjurdja.com) smijete:
+
+  (a) preuzeti, instalirati i pokretati ĐurđaShop na vlastitom poslužitelju
+      za potrebe vlastite web trgovine;
+  (b) konfigurirati trgovinu kroz za to predviđena sučelja (administracija),
+      uključujući postavke, dizajn, sadržaj stranica i uploadane materijale;
+  (c) izrađivati sigurnosne kopije za vlastitu upotrebu.
+
+
+2. ZABRANJENO
+-------------
+Bez izričitog pisanog dopuštenja tvrtke Fork ZABRANJENO je:
+
+  (a) mijenjati, prilagođavati, prevoditi ili izrađivati izvedena djela iz
+      IZVORNOG KODA aplikacije (PHP, JavaScript i ostale programske datoteke),
+      osim podešavanja kroz predviđena konfiguracijska sučelja;
+  (b) uklanjati, onemogućavati, zaobilaziti ili neovlašteno mijenjati bilo
+      koji mehanizam integracije sa sustavom MojaĐurđa — uključujući, ali ne
+      ograničavajući se na: fiskalizaciju, provjeru plana i kvote, ograničenja
+      besplatnog paketa, te obveznu atribuciju ("Pokreće MojaĐurđa") na
+      besplatnom paketu;
+  (c) fiskalizirati narudžbe nastale u ĐurđaShopu kroz bilo koji sustav za
+      izdavanje računa OSIM kroz povezani MojaĐurđa račun;
+  (d) redistribuirati, preprodavati, iznajmljivati, sublicencirati ili javno
+      objavljivati izvorni kod ili njegove dijelove;
+  (e) provoditi reverzni inženjering radi zaobilaženja zaštita ili ograničenja;
+  (f) koristiti aplikaciju bez važećeg MojaĐurđa računa.
+
+Korištenje umjetne inteligencije, automatiziranih alata ili bilo koje druge
+metode radi izvođenja zabranjenih radnji iz ove točke jednako je zabranjeno
+kao i ručno izvođenje. Odgovornost snosi osoba koja radnju naloži ili izvede.
+
+
+3. PRESTANAK PRAVA
+------------------
+Svako kršenje točke 2. AUTOMATSKI i bez prethodne obavijesti ukida vaše pravo
+korištenja ĐurđaShopa. Fork zadržava pravo daljinskog onemogućavanja (kill-
+switch) instalacija koje krše ovu licencu ili zloupotrebljavaju sustav.
+
+
+4. BEZ JAMSTVA / OGRANIČENJE ODGOVORNOSTI
+-----------------------------------------
+Softver se pruža "KAKAV JEST" (as-is), bez ikakvih jamstava. Isključivu
+odgovornost za zakonitost poslovanja web trgovine (uključujući zaštitu
+potrošača, porezne propise i GDPR) snosi vlasnik trgovine. Fork ne odgovara
+za bilo kakvu izravnu ili neizravnu štetu nastalu korištenjem softvera.
+
+
+5. ZADRŽAVANJE OBAVIJESTI
+-------------------------
+Obavijesti o autorskim pravima i licenci u izvornim datotekama ne smiju se
+uklanjati niti mijenjati.
+
+
+Za dopuštenja izvan opsega ove licence: mojadjurdja.com

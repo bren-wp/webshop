@@ -1,7 +1,15 @@
 <?php
 /**
- * ĐurđaShop — bootstrap.
- * Uključuje ga svaka javna stranica, API endpoint i admin init.
+ * ════════════════════════════════════════════════════════════════════
+ * ĐurđaShop © 2026 Fork — VLASNIČKI softver (source-available).
+ * Korištenje isključivo uz aktivan MojaĐurđa račun. Zabranjeno je mijenjati
+ * izvorni kod (osim konfiguracije kroz administraciju), uklanjati ili
+ * zaobilaziti integraciju s MojaĐurđa, fiskalizaciju, provjeru plana/kvote
+ * i atribuciju, te redistribuirati kod. Puni uvjeti: datoteka LICENSE.
+ * Kršenje AUTOMATSKI ukida pravo korištenja i omogućuje daljinsko gašenje.
+ * ════════════════════════════════════════════════════════════════════
+ *
+ * bootstrap — uključuje ga svaka javna stranica, API endpoint i admin init.
  */
 
 define('SHOP_VERSION', '1.1.0');
