@@ -510,3 +510,34 @@ label.f-label { display: block; font-size: 13px; font-weight: 700; margin-bottom
 .shop-banner.warn { background: #b45309; }
 .shop-banner.warn, .shop-banner.danger { animation: banner-in .35s ease; }
 @keyframes banner-in { from { transform: translateY(-100%); } to { transform: translateY(0); } }
+
+/* ── Korisnički profil (Moj račun) ── */
+.account-layout { display: grid; grid-template-columns: 230px 1fr; gap: 24px; align-items: start; margin-bottom: 40px; }
+.account-nav { display: flex; flex-direction: column; gap: 4px; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); padding: 10px; position: sticky; top: 90px; }
+.account-nav a, .acc-logout {
+  display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 10px;
+  color: var(--c-text); font-weight: 600; font-size: 14.5px; text-decoration: none;
+  border: 0; background: transparent; width: 100%; cursor: pointer; text-align: left; font-family: inherit;
+  transition: background .15s, color .15s;
+}
+.account-nav a .ic, .acc-logout .ic { font-size: 16px; width: 20px; text-align: center; }
+.account-nav a:hover, .acc-logout:hover { background: color-mix(in srgb, var(--c-primary) 8%, transparent); opacity: 1; }
+.account-nav a.active { background: var(--c-primary); color: #fff; }
+.acc-logout { color: #b91c1c; }
+.acc-logout:hover { background: #fef2f2; }
+
+.acc-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-top: 18px; }
+.acc-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 18px 12px;
+  background: color-mix(in srgb, var(--c-primary) 5%, var(--c-bg)); border: 1px solid var(--c-border);
+  border-radius: var(--radius); text-decoration: none; color: var(--c-text); transition: transform .15s, box-shadow .15s;
+}
+.acc-stat:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,.08); opacity: 1; }
+.acc-stat .n { font-size: 26px; font-weight: 800; color: var(--c-primary); line-height: 1.1; }
+.acc-stat .l { font-size: 12.5px; color: var(--c-muted); }
+
+@media (max-width: 760px) {
+  .account-layout { grid-template-columns: 1fr; }
+  .account-nav { position: static; flex-direction: row; flex-wrap: wrap; }
+  .account-nav a, .acc-logout { width: auto; }
+}
