@@ -47,10 +47,83 @@ class Djurdja
         return 'offline';
     }
 
-    /** Smije li se zaprimati narudžbe? */
+    /**
+     * Koliko nefiskaliziranih (zbog potrošene kvote REZERVIRANIH) narudžbi
+     * shop smije nakupiti prije nego privremeno prestane primati narudžbe.
+     * Hardkodirano (ne u settings) namjerno — da vlasnik ne digne na 9999.
+     */
+    public const RESERVE_LIMIT = 5;
+
+    /** Je li veza s đurđom dovoljna za zaprimanje narudžbi? */
     public static function checkoutAllowed(): bool
     {
         return self::shopAllowed() && in_array(self::status(), ['connected', 'stale'], true);
+    }
+
+    /** Smije li se UPRAVO SADA zaprimiti narudžba (veza OK + nije kvota-brana)? */
+    public static function acceptsOrders(): bool
+    {
+        return self::checkoutAllowed() && !self::ordersBlocked();
+    }
+
+    /**
+     * Obavijest za storefront (banner). Vraća ['type'=>'danger'|'warn','text'=>...]
+     * ili null. Server-side izvor istine; JS ga samo prikazuje (i obfuscira).
+     */
+    public static function storefrontNotice(): ?array
+    {
+        if (!self::checkoutAllowed()) {
+            return ['type' => 'danger', 'text' => '⏸ Trgovina trenutno ne zaprima nove narudžbe. Razgledavanje je i dalje moguće — hvala na strpljenju!'];
+        }
+        if (self::ordersBlocked()) {
+            return ['type' => 'danger', 'text' => '⏸ Trgovina je privremeno pauzirala nove narudžbe. Uskoro nastavljamo — hvala na strpljenju!'];
+        }
+        $left = self::reservesLeft();
+        if ($left !== null && $left > 0 && $left <= 2) {
+            return ['type' => 'warn', 'text' => "⚠ Žurite — trgovina zaprima još samo $left " . ($left === 1 ? 'narudžbu' : 'narudžbe') . " prije kratke pauze."];
+        }
+        return null;
+    }
+
+    /** Je li mjesečna kvota dokumenata potrošena? */
+    public static function quotaExhausted(): bool
+    {
+        $q = self::quota();
+        return $q !== null && (int) $q['used'] >= (int) $q['limit'];
+    }
+
+    /** Broj narudžbi rezerviranih jer je kvota bila potrošena (čekaju ručnu fiskalizaciju). */
+    public static function reservedCount(): int
+    {
+        try {
+            return (int) Database::instance()->fetchColumn(
+                "SELECT COUNT(*) FROM orders
+                 WHERE fiscal_last_error_code = 'plan_limit_reached'
+                   AND fiscal_status NOT IN ('fiscalized', 'stornoed')"
+            );
+        } catch (Throwable $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Shop privremeno NE prima narudžbe: kvota potrošena I već nakupljeno
+     * RESERVE_LIMIT rezerviranih (anti-zloupotreba — sprječava masovno
+     * gomilanje nefiskaliziranih narudžbi za fiskalizaciju izvan đurđe).
+     */
+    public static function ordersBlocked(): bool
+    {
+        return self::quotaExhausted() && self::reservedCount() >= self::RESERVE_LIMIT;
+    }
+
+    /**
+     * Koliko još narudžbi do privremene pauze kad je kvota potrošena
+     * (za upozorenje na storefrontu), ili null ako kvota nije potrošena.
+     */
+    public static function reservesLeft(): ?int
+    {
+        if (!self::quotaExhausted()) return null;
+        return max(0, self::RESERVE_LIMIT - self::reservedCount());
     }
 
     /**

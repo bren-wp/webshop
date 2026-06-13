@@ -5,7 +5,12 @@ require_once __DIR__ . '/core/bootstrap.php';
 $items = Cart::detailed();
 if (!$items) redirect('kosarica.php');
 
-$checkoutOk = Djurdja::checkoutAllowed();
+$checkoutOk = Djurdja::acceptsOrders();
+$blockReason = !$checkoutOk
+    ? (Djurdja::ordersBlocked()
+        ? 'Trgovina je privremeno pauzirala zaprimanje novih narudžbi. Molimo pokušajte ponovno kasnije — hvala na strpljenju.'
+        : 'Trgovina trenutno ne može zaprimiti narudžbu (veza sa sustavom za izdavanje računa nije dostupna). Molimo pokušajte kasnije.')
+    : null;
 $subtotal = Cart::subtotal($items);
 $allServices = !array_filter($items, fn($i) => (int) $i['is_service'] === 0);
 $fo = (float) s('shipping_free_over', 0);
@@ -21,8 +26,8 @@ require __DIR__ . '/includes/header.php';
 <div class="container">
   <div class="section-head" style="margin-top:26px"><h1 class="section-title">Blagajna</h1></div>
 
-  <?php if (!$checkoutOk): ?>
-    <div class="alert alert-warning">Trgovina trenutno ne može zaprimiti narudžbu (veza sa sustavom za izdavanje računa nije dostupna). Molimo pokušajte kasnije.</div>
+  <?php if ($blockReason): ?>
+    <div class="alert alert-warning"><?= e($blockReason) ?></div>
   <?php endif; ?>
 
   <form id="checkout-form" <?= $checkoutOk ? '' : 'style="opacity:.5;pointer-events:none"' ?>>

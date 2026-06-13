@@ -16,6 +16,11 @@ class Orders
         if (!Djurdja::checkoutAllowed()) {
             throw new RuntimeException('Trgovina trenutno ne zaprima narudžbe (veza sa sustavom za izdavanje računa nije dostupna). Pokušajte kasnije.');
         }
+        // Anti-zloupotreba: kvota potrošena + nakupljeno previše rezerviranih →
+        // privremena pauza (PRAVA brana, server-side; JS sloj je samo prikaz)
+        if (Djurdja::ordersBlocked()) {
+            throw new RuntimeException('Trgovina trenutno ne zaprima nove narudžbe. Molimo pokušajte ponovno kasnije.');
+        }
         if (!$items) {
             throw new RuntimeException('Košarica je prazna.');
         }

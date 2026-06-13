@@ -26,10 +26,11 @@ $logoFile = s('logo');
 $navPages = $db->fetchAll('SELECT slug, title FROM pages WHERE is_visible = 1 AND in_nav = 1 ORDER BY sort_order, id');
 $blogActive = Djurdja::blogActive()
     && (int) $db->fetchColumn('SELECT COUNT(*) FROM blog_posts WHERE is_published = 1') > 0;
-$checkoutOk = Djurdja::checkoutAllowed();
+$checkoutOk = Djurdja::acceptsOrders();
+$shopNotice = Djurdja::storefrontNotice();
 $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
 ?><!doctype html>
-<html lang="hr" data-base="<?= e(BASE_URL) ?>">
+<html lang="hr" data-base="<?= e(BASE_URL) ?>" data-accepts="<?= $checkoutOk ? '1' : '0' ?>"<?= $shopNotice ? ' data-notice="' . e($shopNotice['type']) . '"' : '' ?>>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -42,8 +43,8 @@ $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
 <?= Seo::organizationJsonLd() ?>
 </head>
 <body>
-<?php if (!$checkoutOk): ?>
-<div class="shop-banner">⏸ Trgovina trenutno ne zaprima nove narudžbe. Razgledavanje je i dalje moguće — hvala na strpljenju!</div>
+<?php if ($shopNotice): ?>
+<div class="shop-banner <?= $shopNotice['type'] === 'warn' ? 'warn' : 'danger' ?>" id="shop-notice"><?= e($shopNotice['text']) ?></div>
 <?php endif; ?>
 
 <header class="site-header">

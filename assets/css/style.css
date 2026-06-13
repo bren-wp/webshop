@@ -504,3 +504,9 @@ label.f-label { display: block; font-size: 13px; font-weight: 700; margin-bottom
   .hero-inner { padding: 56px 0 62px; }
   .hero-h-compact .hero-inner { padding: 30px 0 36px; }
 }
+
+/* ── Storefront obavijest (kvota/pauza) — danger/warn varijante ── */
+.shop-banner.danger { background: #b91c1c; }
+.shop-banner.warn { background: #b45309; }
+.shop-banner.warn, .shop-banner.danger { animation: banner-in .35s ease; }
+@keyframes banner-in { from { transform: translateY(-100%); } to { transform: translateY(0); } }
