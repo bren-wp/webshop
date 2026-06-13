@@ -1,5 +1,10 @@
 # Tajne i lokalna konfiguracija — NIKAD u git
-config/config.php
+# (sve u config/ OSIM predloška i .htaccess — pokriva config.php, *.bak.php, kopije)
+config/*
+!config/config.sample.php
+!config/.htaccess
+*.bak
+*.bak.php
 install/.lock
 
 # Korisnički sadržaj
