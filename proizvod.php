@@ -27,11 +27,14 @@ $related = $db->fetchAll(
 );
 
 $variantData = Variants::storefrontData($product);
+// Zaliha se prati (i može "rasprodati") samo ako: NIJE usluga, firma vodi
+// skladište, NE dopušta minus. Inače je artikl uvijek dostupan.
+$tracks = empty($product['is_service']) && (int) $product['track_stock'] === 1 && !Djurdja::allowNegativeStock();
 $outOfStock = $variantData
     ? !array_filter($variantData['variants'], fn($v) => !$v['out'])   // sve varijante rasprodane
-    : ((int) $product['track_stock'] === 1 && (float) ($product['stock_qty'] ?? 0) <= 0);
-$lowStock = !$variantData && !$outOfStock && (int) $product['track_stock'] === 1
-    && $product['stock_qty'] !== null && (float) $product['stock_qty'] <= 5;
+    : ($tracks && (float) ($product['stock_qty'] ?? 0) <= 0);
+$lowStock = !$variantData && $tracks && $product['stock_qty'] !== null
+    && (float) $product['stock_qty'] > 0 && (float) $product['stock_qty'] <= 5;
 
 $displayPrice = (float) $product['price'];
 $priceFrom = false;
@@ -88,8 +91,10 @@ require __DIR__ . '/includes/header.php';
 
       <?php if ($variantData): ?>
         <span id="pd-stock-pill" class="stock-pill" style="display:none"></span>
-      <?php elseif ((int) $product['track_stock'] === 1): ?>
-        <span class="stock-pill <?= $outOfStock ? 'out' : 'in' ?>"><span class="dot"></span><?= $outOfStock ? 'Trenutno nedostupno' : ($lowStock ? 'Još samo ' . (int) $product['stock_qty'] . ' kom' : 'Na zalihi') ?></span>
+      <?php elseif ($tracks): ?>
+        <span class="stock-pill <?= $outOfStock ? 'out' : 'in' ?>"><span class="dot"></span><?= $outOfStock ? 'Trenutno nedostupno' : ('Na zalihi: ' . (int) $product['stock_qty'] . ' ' . e($product['unit'])) ?></span>
+      <?php else: ?>
+        <span class="stock-pill in"><span class="dot"></span>Dostupno</span>
       <?php endif; ?>
 
       <?php if ($product['short_description']): ?>
@@ -118,7 +123,7 @@ require __DIR__ . '/includes/header.php';
       <div class="qty-row">
         <div class="qty-stepper">
           <button type="button" data-step="#qty-input" data-dec aria-label="Manje">−</button>
-          <input id="qty-input" type="number" value="1" min="1" max="<?= (!$variantData && (int) $product['track_stock'] === 1 && $product['stock_qty'] !== null) ? max(1, (int) $product['stock_qty']) : 999 ?>">
+          <input id="qty-input" type="number" value="1" min="1" max="<?= (!$variantData && $tracks && $product['stock_qty'] !== null) ? max(1, (int) $product['stock_qty']) : 999 ?>">
           <button type="button" data-step="#qty-input" aria-label="Više">+</button>
         </div>
         <button class="btn btn-lg" data-add="<?= (int) $product['id'] ?>" data-use-qty<?= $variantData ? ' data-variant-required' : '' ?> <?= $outOfStock ? 'disabled' : '' ?> style="flex:1">

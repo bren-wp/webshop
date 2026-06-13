@@ -132,9 +132,11 @@ class Sync
             $catId = $catId ? (int) $catId : null;
         }
 
-        $stock = $p['stock'] ?? null;
-        // trackStock eksplicitno iz đurđe ako postoji; inače: zaliha poslana = prati se
-        $track = array_key_exists('trackStock', $p) ? (!empty($p['trackStock']) ? 1 : 0) : ($stock === null ? 0 : 1);
+        $isService = !empty($p['isService']);
+        // Usluga NIKAD ne prati zalihu (uvijek dostupna). Inače: trackStock iz
+        // đurđe ako postoji, inače "zaliha poslana = prati se".
+        $stock = $isService ? null : ($p['stock'] ?? null);
+        $track = $isService ? 0 : (array_key_exists('trackStock', $p) ? (!empty($p['trackStock']) ? 1 : 0) : ($stock === null ? 0 : 1));
         $core = [
             'category_id' => $catId,
             'name'        => mb_substr($name, 0, 255),
@@ -142,7 +144,7 @@ class Sync
             'vat_rate'    => round((float) ($p['vatRate'] ?? 25), 2),
             'unit'        => mb_substr((string) ($p['unit'] ?? 'kom'), 0, 50),
             'barcode'     => $p['barcode'] ?? null,
-            'is_service'  => !empty($p['isService']) ? 1 : 0,
+            'is_service'  => $isService ? 1 : 0,
             'stock_qty'   => $stock === null ? null : round((float) $stock, 2),
             'track_stock' => $track,
             'short_description' => mb_substr(trim((string) ($p['description'] ?? '')), 0, 500) ?: null,

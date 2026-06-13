@@ -4,7 +4,9 @@
  *   id, name, slug, price, unit, track_stock, stock_qty, is_featured,
  *   image (filename|null), cat_name (opcionalno)
  */
-$outOfStock = ((int) $p['track_stock'] === 1 && (float) ($p['stock_qty'] ?? 0) <= 0);
+// "Rasprodano" samo ako se zaliha stvarno prati: nije usluga, vodi se skladište, bez minusa
+$outOfStock = empty($p['is_service']) && (int) $p['track_stock'] === 1
+    && !Djurdja::allowNegativeStock() && (float) ($p['stock_qty'] ?? 0) <= 0;
 ?>
 <article class="p-card fade-up">
   <div class="p-media">
