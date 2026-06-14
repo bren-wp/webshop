@@ -18,9 +18,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($m) {
             $cfg = $m['config'];
             if ($code === 'stripe') {
-                $cfg['publishable_key'] = trim((string) $_POST['publishable_key']);
-                if (trim((string) $_POST['secret_key']) !== '') {
-                    $cfg['secret_key_enc'] = Crypto::encrypt(trim((string) $_POST['secret_key']));
+                $pk = trim((string) $_POST['publishable_key']);
+                $sk = trim((string) $_POST['secret_key']);
+                // Validacija formata — sprječava da automatsko popunjavanje preglednika
+                // (login heuristika) ubaci e-mail/lozinku umjesto Stripe ključa.
+                if ($pk !== '' && !preg_match('/^pk_(test|live)_/', $pk)) {
+                    flash('error', 'Publishable key mora počinjati s "pk_test_" ili "pk_live_". U polje je upisan e-mail ili ga je preglednik automatski popunio — ispravite ga ili ostavite prazno.');
+                    redirect('admin/placanja.php');
+                }
+                if ($sk !== '' && !preg_match('/^(sk|rk)_(test|live)_/', $sk)) {
+                    flash('error', 'Secret key mora počinjati s "sk_test_" / "sk_live_". Provjerite da niste zalijepili krivu vrijednost.');
+                    redirect('admin/placanja.php');
+                }
+                $cfg['publishable_key'] = $pk;
+                if ($sk !== '') {
+                    $cfg['secret_key_enc'] = Crypto::encrypt($sk);
                 }
                 if (trim((string) $_POST['webhook_secret']) !== '') {
                     $cfg['webhook_secret_enc'] = Crypto::encrypt(trim((string) $_POST['webhook_secret']));
@@ -71,7 +83,7 @@ require __DIR__ . '/templates/header.php';
     <span class="badge <?= $m['is_active'] ? 'green' : 'gray' ?>"><?= $m['is_active'] ? 'aktivno' : 'isključeno' ?></span>
     <?php if ($m['code'] === 'stripe' && !empty($cfg['sandbox'])): ?><span class="badge amber">sandbox</span><?php endif; ?>
   </h3>
-  <form method="post">
+  <form method="post" autocomplete="off">
     <?= csrf_field() ?><input type="hidden" name="action" value="method"><input type="hidden" name="code" value="<?= e($m['code']) ?>">
     <div class="aform-grid">
       <div class="full"><label class="al">Opis (vidljiv kupcu na blagajni)</label><input class="ainput" name="description" value="<?= e($m['description']) ?>"></div>
@@ -84,9 +96,9 @@ require __DIR__ . '/templates/header.php';
       <div><label class="al">Iznos naknade</label><input class="ainput" type="number" step="0.01" name="fee_value" value="<?= e($m['fee_value']) ?>"></div>
 
       <?php if ($m['code'] === 'stripe'): ?>
-        <div class="full"><label class="al">Publishable key</label><input class="ainput" name="publishable_key" value="<?= e($cfg['publishable_key'] ?? '') ?>" placeholder="pk_live_… / pk_test_…"></div>
-        <div><label class="al">Secret key <?= !empty($cfg['secret_key_enc']) ? '(spremljen: ' . e(Crypto::hint($cfg['secret_key_enc'])) . ')' : '' ?></label><input class="ainput" type="password" name="secret_key" placeholder="<?= !empty($cfg['secret_key_enc']) ? 'ostavi prazno = ne mijenjaj' : 'sk_live_… / sk_test_…' ?>"></div>
-        <div><label class="al">Webhook secret <?= !empty($cfg['webhook_secret_enc']) ? '(spremljen)' : '' ?></label><input class="ainput" type="password" name="webhook_secret" placeholder="whsec_…"></div>
+        <div class="full"><label class="al">Publishable key</label><input class="ainput" name="publishable_key" autocomplete="off" value="<?= e($cfg['publishable_key'] ?? '') ?>" placeholder="pk_live_… / pk_test_…"></div>
+        <div><label class="al">Secret key <?= !empty($cfg['secret_key_enc']) ? '(spremljen: ' . e(Crypto::hint($cfg['secret_key_enc'])) . ')' : '' ?></label><input class="ainput" type="password" name="secret_key" autocomplete="new-password" placeholder="<?= !empty($cfg['secret_key_enc']) ? 'ostavi prazno = ne mijenjaj' : 'sk_live_… / sk_test_…' ?>"></div>
+        <div><label class="al">Webhook secret <?= !empty($cfg['webhook_secret_enc']) ? '(spremljen)' : '' ?></label><input class="ainput" type="password" name="webhook_secret" autocomplete="new-password" placeholder="whsec_…"></div>
         <div class="full"><label class="acheck"><input type="checkbox" name="sandbox" <?= !empty($cfg['sandbox']) ? 'checked' : '' ?>> Sandbox/test način (računi se fiskaliziraju u TEST modu)</label>
         <p class="sub">Webhook URL za Stripe dashboard: <code><?= e(SITE_URL . '/api/stripe-webhook.php') ?></code> (event: checkout.session.completed)</p></div>
       <?php elseif ($m['code'] === 'cod'): ?>

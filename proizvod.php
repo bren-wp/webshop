@@ -102,7 +102,7 @@ require __DIR__ . '/includes/header.php';
       <?php endif; ?>
 
       <div class="pd-price"><small id="pd-price-from"<?= $priceFrom ? '' : ' style="display:none"' ?>>od </small><span id="pd-price-val"><?= fmt_price($displayPrice) ?></span> <small>/ <?= e($product['unit']) ?></small></div>
-      <div class="pd-vat"><?= Djurdja::company()['inVatSystem'] ?? true ? 'PDV (' . rtrim(rtrim(number_format((float) $product['vat_rate'], 2, ',', ''), '0'), ',') . '%) uključen u cijenu.' : 'PDV nije obračunat (prodavatelj nije u sustavu PDV-a).' ?></div>
+      <div class="pd-vat"><?= !empty(Djurdja::company()['inVatSystem']) ? 'PDV (' . rtrim(rtrim(number_format((float) $product['vat_rate'], 2, ',', ''), '0'), ',') . '%) uključen u cijenu.' : 'PDV nije obračunat (prodavatelj nije u sustavu PDV-a).' ?></div>
 
       <?php if ($variantData): ?>
         <div id="variant-area" class="variant-area">

@@ -52,21 +52,33 @@ try {
         'name' => $name, 'email' => $email, 'phone' => $phone,
         'address' => $address, 'city' => $city, 'postal' => $postal, 'note' => $note,
     ], $method, $items);
-
-    $pm = new PaymentManager();
-    $redirect = $pm->initiate($order); // Stripe → URL, ostalo → null
-
-    Cart::clear();
-    Security::clearAttempts($rlKey);
-
-    json_out([
-        'ok' => true,
-        'orderNumber' => $order['order_number'],
-        'redirect' => $redirect ?: url('narudzba-potvrda.php') . '?t=' . urlencode($order['guest_token']),
-    ]);
 } catch (RuntimeException $e) {
+    // Poslovno pravilo (npr. trgovina ne zaprima narudžbe) — poruka je već prilagođena kupcu.
     json_out(['ok' => false, 'error' => $e->getMessage()], 422);
 } catch (Throwable $e) {
-    error_log('[checkout] ' . $e->getMessage());
+    error_log('[checkout] kreiranje narudžbe: ' . $e->getMessage());
     json_out(['ok' => false, 'error' => 'Došlo je do greške pri obradi narudžbe. Pokušajte ponovno.'], 500);
 }
+
+// Narudžba je spremljena. Plaćanje pokrećemo zasebno: ako padne (npr. Stripe nije
+// ispravno konfiguriran ili je ključ neispravan), kupac mora dobiti JASNU poruku
+// umjesto tihog nestanka. Košaricu NE praznimo da kupac može odmah pokušati ponovno.
+try {
+    $redirect = (new PaymentManager())->initiate($order); // kartice → URL, pouzeće → null
+} catch (Throwable $e) {
+    error_log('[checkout] pokretanje plaćanja (' . $method . ') za ' . $order['order_number'] . ': ' . $e->getMessage());
+    json_out([
+        'ok' => false,
+        'orderNumber' => $order['order_number'],
+        'error' => 'Plaćanje karticom trenutačno nije moguće pokrenuti. Vaša narudžba je spremljena i nije naplaćena — odaberite plaćanje pouzećem ili pokušajte kasnije.',
+    ], 502);
+}
+
+Cart::clear();
+Security::clearAttempts($rlKey);
+
+json_out([
+    'ok' => true,
+    'orderNumber' => $order['order_number'],
+    'redirect' => $redirect ?: url('narudzba-potvrda.php') . '?t=' . urlencode($order['guest_token']),
+]);

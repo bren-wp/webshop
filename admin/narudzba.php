@@ -55,6 +55,11 @@ $order = $db->fetch('SELECT * FROM orders WHERE id = :id', [':id' => $id]);
 $items = $db->fetchAll('SELECT * FROM order_items WHERE order_id = :o', [':o' => $id]);
 $flog = $db->fetchAll('SELECT * FROM fiscal_log WHERE order_id = :o ORDER BY id DESC LIMIT 12', [':o' => $id]);
 
+// PDV se prikazuje SAMO ako je firma u sustavu PDV-a (đurđa je izvor istine).
+// Ako nije, prikaz PDV stope je nezakonit — stupac se skriva i dodaje napomena.
+$inVat = !empty(Djurdja::company()['inVatSystem']);
+$cspan = $inVat ? 4 : 3; // colspan zbrojnih redaka (jedan stupac manje bez PDV-a)
+
 $pageTitle = 'Narudžba ' . $order['order_number'];
 require __DIR__ . '/templates/header.php';
 ?>
@@ -70,22 +75,23 @@ require __DIR__ . '/templates/header.php';
     <div class="acard">
       <h3>Stavke</h3>
       <table class="atable">
-        <thead><tr><th>Artikl</th><th class="num">Cijena</th><th class="num">Kol.</th><th class="num">PDV</th><th class="num">Ukupno</th></tr></thead>
+        <thead><tr><th>Artikl</th><th class="num">Cijena</th><th class="num">Kol.</th><?php if ($inVat): ?><th class="num">PDV</th><?php endif; ?><th class="num">Ukupno</th></tr></thead>
         <tbody>
         <?php foreach ($items as $it): ?>
           <tr>
             <td><?= e($it['name']) ?><?php if (!empty($it['variant_label'])): ?><br><span style="font-size:12px;color:#9ca3af"><?= e($it['variant_label']) ?></span><?php endif; ?></td>
             <td class="num"><?= fmt_price($it['unit_price']) ?></td>
             <td class="num"><?= (int) $it['quantity'] ?></td>
-            <td class="num"><?= rtrim(rtrim(number_format((float) $it['vat_rate'], 2, ',', ''), '0'), ',') ?>%</td>
+            <?php if ($inVat): ?><td class="num"><?= rtrim(rtrim(number_format((float) $it['vat_rate'], 2, ',', ''), '0'), ',') ?>%</td><?php endif; ?>
             <td class="num"><strong><?= fmt_price($it['total']) ?></strong></td>
           </tr>
         <?php endforeach; ?>
-        <tr><td colspan="4" class="num">Dostava</td><td class="num"><?= fmt_price($order['shipping_cost']) ?></td></tr>
-        <?php if ((float) $order['payment_fee'] > 0): ?><tr><td colspan="4" class="num">Naknada plaćanja</td><td class="num"><?= fmt_price($order['payment_fee']) ?></td></tr><?php endif; ?>
-        <tr><td colspan="4" class="num" style="font-size:15px"><strong>UKUPNO</strong></td><td class="num" style="font-size:15px"><strong><?= fmt_price($order['total']) ?></strong></td></tr>
+        <tr><td colspan="<?= $cspan ?>" class="num">Dostava</td><td class="num"><?= fmt_price($order['shipping_cost']) ?></td></tr>
+        <?php if ((float) $order['payment_fee'] > 0): ?><tr><td colspan="<?= $cspan ?>" class="num">Naknada plaćanja</td><td class="num"><?= fmt_price($order['payment_fee']) ?></td></tr><?php endif; ?>
+        <tr><td colspan="<?= $cspan ?>" class="num" style="font-size:15px"><strong>UKUPNO</strong></td><td class="num" style="font-size:15px"><strong><?= fmt_price($order['total']) ?></strong></td></tr>
         </tbody>
       </table>
+      <?php if (!$inVat): ?><p style="font-size:12px;color:#8b90a0;margin:10px 0 0">PDV nije obračunat — prodavatelj nije u sustavu PDV-a (čl. 90. Zakona o porezu na dodanu vrijednost).</p><?php endif; ?>
     </div>
 
     <div class="acard">
