@@ -50,6 +50,7 @@ $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
 ?><!doctype html>
 <html lang="hr" data-base="<?= e(BASE_URL) ?>" data-accepts="<?= $checkoutOk ? '1' : '0' ?>"<?= $shopNotice ? ' data-notice="' . e($shopNotice['type']) . '"' : '' ?>>
 <head>
+<script>(function(){try{var t=localStorage.getItem('dj-theme');if(!t)t=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
@@ -91,6 +92,10 @@ $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
         <a class="icon-btn" href="<?= e(url(Customer::isLoggedIn() ? 'moj-racun.php' : 'prijava.php')) ?>" aria-label="Moj račun" title="<?= Customer::isLoggedIn() ? 'Moj račun' : 'Prijava' ?>">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </a>
+        <button class="icon-btn theme-toggle" type="button" aria-label="Svijetli/tamni način" title="Svijetli / tamni način" onclick="(function(d){var n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('dj-theme',n)}catch(e){}})(document.documentElement)">
+          <svg class="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.2" y1="4.2" x2="5.6" y2="5.6"/><line x1="18.4" y1="18.4" x2="19.8" y2="19.8"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/></svg>
+        </button>
         <button class="icon-btn" data-toggle-search aria-label="Pretraga">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
         </button>

@@ -470,6 +470,12 @@ label.f-label { display: block; font-size: 13px; font-weight: 700; margin-bottom
 .rev-stars-input label:hover, .rev-stars-input label:hover ~ label, .rev-stars-input input:checked ~ label { color: #f59e0b; }
 .rev-stars-input input:focus-visible + label { outline: 2px solid var(--c-primary); border-radius: 4px; }
 
+/* Dark mode (zadržava brend boju, mijenja neutralne) */
+:root[data-theme="dark"] { --c-bg: #0f1117; --c-surface: #171a21; --c-text: #e6e8ee; --c-muted: #9aa3b2; --c-border: #2a2f3a; }
+.theme-toggle .ic-sun { display: none; }
+:root[data-theme="dark"] .theme-toggle .ic-moon { display: none; }
+:root[data-theme="dark"] .theme-toggle .ic-sun { display: inline-block; }
+
 /* ── Dijeljenje proizvoda ── */
 .share-row { display: flex; align-items: center; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
 .share-row .lbl { font-size: 13px; color: var(--c-muted); margin-right: 2px; }
