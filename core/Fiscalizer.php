@@ -65,6 +65,19 @@ class Fiscalizer
         }
 
         $mode = self::determineMode($client, $order['payment_method']);
+        // Sigurnost: produkcijski đurđa ključ (live) + TESTNO plaćanje (npr. Stripe
+        // pk_test_) = pravi porezni račun za lažnu uplatu → blokiraj. Pravi ključ
+        // traži pravo plaćanje; inače bi se kvario produkcijski niz brojeva računa.
+        if ($mode === 'live') {
+            try {
+                if ((new PaymentManager())->isSandbox($order['payment_method'])) {
+                    $err = 'Produkcijski đurđa ključ uz testno plaćanje — fiskalizacija je blokirana (ne izdaje se pravi račun za testnu uplatu). Upišite prave ključeve plaćanja ili koristite testni đurđa ključ.';
+                    self::markFailed($db, $orderId, $err, 'sandbox_with_live_key');
+                    return ['success' => false, 'error' => $err];
+                }
+            } catch (Throwable $e) {
+            }
+        }
         $company = Djurdja::company();
         $oib = $company['companyOib'] ?? null;
 
@@ -270,15 +283,16 @@ class Fiscalizer
     // Helpers
     // ==================================================================
 
+    /**
+     * Mod fiskalizacije ISKLJUČIVO prema đurđa ključu: `pk_live_` = produkcija (live),
+     * inače test. Test je moguć SAMO s TESTNIM đurđa ključem — tako se lažni/testni
+     * računi NIKAD ne numeriraju u pravom (produkcijskom) nizu Porezne uprave.
+     * Postavke (force_test_mode) ni sandbox plaćanja NE smiju forsirati test na
+     * produkcijskom ključu (to bi pokvarilo neprekinuti slijed brojeva računa).
+     */
     private static function determineMode(DjurdjaClient $client, string $paymentMethod): string
     {
-        if (Settings::get('force_test_mode') === '1') return 'test';
-        if ($client->mode() === 'test') return 'test';
-        try {
-            if ((new PaymentManager())->isSandbox($paymentMethod)) return 'test';
-        } catch (Throwable $e) {
-        }
-        return 'live';
+        return $client->mode(); // 'live' (pk_live_) ili 'test'
     }
 
     /**

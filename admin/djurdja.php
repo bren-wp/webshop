@@ -42,7 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'fiscal') {
         Settings::set('fiscal_enabled', !empty($_POST['fiscal_enabled']) ? '1' : '0');
-        Settings::set('force_test_mode', !empty($_POST['force_test_mode']) ? '1' : '0');
         Settings::set('business_space', mb_substr(trim((string) $_POST['business_space']) ?: 'WEBSHOP', 0, 20));
         Settings::set('cash_register', mb_substr(trim((string) $_POST['cash_register']) ?: '1', 0, 20));
         flash('success', 'Fiskalne postavke spremljene.');
@@ -170,7 +169,7 @@ require __DIR__ . '/templates/header.php';
       <form method="post">
         <?= csrf_field() ?><input type="hidden" name="action" value="fiscal">
         <label class="acheck"><input type="checkbox" name="fiscal_enabled" <?= s('fiscal_enabled', '1') === '1' ? 'checked' : '' ?>> Fiskalizacija uključena</label>
-        <label class="acheck"><input type="checkbox" name="force_test_mode" <?= s('force_test_mode') === '1' ? 'checked' : '' ?>> Prisili TEST mod (razvoj — računi ne idu u pravu Poreznu)</label>
+        <p class="sub" style="margin:6px 0 10px">Mod se određuje automatski prema vašem đurđa API ključu: <strong>testni ključ → testni računi</strong>, <strong>produkcijski ključ → pravi računi</strong>. Test se NE može prisiliti na produkcijskom ključu (da se lažni računi ne numeriraju u pravom poreznom nizu).</p>
         <div class="aform-grid">
           <div><label class="al">Poslovni prostor</label><input class="ainput" name="business_space" value="<?= e(s('business_space', 'WEBSHOP')) ?>"></div>
           <div><label class="al">Naplatni uređaj</label><input class="ainput" name="cash_register" value="<?= e(s('cash_register', '1')) ?>"></div>
