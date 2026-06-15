@@ -164,12 +164,14 @@ require __DIR__ . '/templates/header.php';
       </form>
     </div>
 
+    <?php require __DIR__ . '/templates/fiscal-mode-panel.php'; ?>
+
     <div class="acard">
       <h3>Fiskalizacija</h3>
       <form method="post">
         <?= csrf_field() ?><input type="hidden" name="action" value="fiscal">
         <label class="acheck"><input type="checkbox" name="fiscal_enabled" <?= s('fiscal_enabled', '1') === '1' ? 'checked' : '' ?>> Fiskalizacija uključena</label>
-        <p class="sub" style="margin:6px 0 10px">Mod se određuje automatski prema vašem đurđa API ključu: <strong>testni ključ → testni računi</strong>, <strong>produkcijski ključ → pravi računi</strong>. Test se NE može prisiliti na produkcijskom ključu (da se lažni računi ne numeriraju u pravom poreznom nizu).</p>
+        <p class="sub" style="margin:6px 0 10px">Mod (test/produkcija) prikazan je gore — određuje ga vaš đurđa <strong>certifikat</strong>, a računi se uvijek šalju pravoj Poreznoj (demo cert → demo CIS, produkcijski → pravi). Test se NE može prisiliti na produkcijskom certifikatu.</p>
         <div class="aform-grid">
           <div><label class="al">Poslovni prostor</label><input class="ainput" name="business_space" value="<?= e(s('business_space', 'WEBSHOP')) ?>"></div>
           <div><label class="al">Naplatni uređaj</label><input class="ainput" name="cash_register" value="<?= e(s('cash_register', '1')) ?>"></div>

@@ -66,6 +66,7 @@ $methods = $pm->getAllMethods();
 $pageTitle = 'Plaćanja i dostava';
 require __DIR__ . '/templates/header.php';
 ?>
+<?php require __DIR__ . '/templates/fiscal-mode-panel.php'; ?>
 <div class="acard">
   <h3>🚚 Dostava</h3>
   <form method="post" style="display:flex;gap:16px;align-items:end;flex-wrap:wrap">

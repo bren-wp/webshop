@@ -220,6 +220,53 @@ class Djurdja
         return in_array($e, ['DEMO', 'PROD'], true) ? $e : null;
     }
 
+    /**
+     * Status fiskalnog moda za prikaz vlasniku (Đurđa veza / Plaćanja).
+     * Mod (DEMO/PROD) određuje đurđa certifikat firme — shop ga NE mijenja, samo
+     * prikazuje i provjerava da API ključ i Stripe odgovaraju tom modu. To je
+     * "prekidač s uvjetima": produkcija je tek kad je sve usklađeno.
+     *
+     * @return array{mode:?string, certKnown:bool, keyMode:?string, stripeActive:bool, stripeMode:?string, checks:array<int,array{label:string,ok:bool,note:string}>, aligned:bool}
+     */
+    public static function fiscalStatus(): array
+    {
+        $env = self::fiscalizationEnv();                       // 'DEMO'|'PROD'|null (certifikat)
+        $client = self::client();
+        $keyMode = $client ? $client->mode() : null;          // 'test'|'live'
+        $mode = $env ?? ($keyMode === 'live' ? 'PROD' : ($keyMode === 'test' ? 'DEMO' : null));
+        $want = $mode === 'PROD' ? 'live' : 'test';
+
+        $stripeActive = false; $stripeMode = null;
+        try {
+            $pm = new PaymentManager();
+            $m = $pm->getMethod('stripe');
+            $stripeActive = $m && (int) $m['is_active'] === 1;
+            if ($stripeActive) $stripeMode = $pm->isSandbox('stripe') ? 'test' : 'live';
+        } catch (Throwable $e) {
+        }
+
+        $checks = [[
+            'label' => 'Đurđa API ključ',
+            'ok'    => $keyMode === $want,
+            'note'  => 'ključ je ' . ($keyMode ?: '—') . ($keyMode === $want ? '' : ' — za ' . ($mode ?: '?') . ' treba ' . $want),
+        ]];
+        if ($stripeActive) {
+            $checks[] = [
+                'label' => 'Stripe kartično plaćanje',
+                'ok'    => $stripeMode === $want,
+                'note'  => 'Stripe je ' . ($stripeMode ?: '—') . ($stripeMode === $want ? '' : ' — za ' . ($mode ?: '?') . ' treba ' . $want),
+            ];
+        }
+        $aligned = true;
+        foreach ($checks as $c) { if (!$c['ok']) { $aligned = false; break; } }
+
+        return [
+            'mode' => $mode, 'certKnown' => $env !== null, 'keyMode' => $keyMode,
+            'stripeActive' => $stripeActive, 'stripeMode' => $stripeMode,
+            'checks' => $checks, 'aligned' => $aligned,
+        ];
+    }
+
     /** Zaglavlje računa (vlasnik ga definira u đurđa profilu — izvor istine). */
     public static function invoiceHeader(): string
     {
