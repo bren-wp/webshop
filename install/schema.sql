@@ -285,9 +285,9 @@ CREATE TABLE IF NOT EXISTS newsletter_subscribers (
 -- Seed: načini plaćanja
 -- ============================================================
 INSERT INTO payment_methods (code, name, description, is_active, sort_order, config, fee_type, fee_value, fiscal_auto) VALUES
-('cod', 'Pouzeće', 'Plaćanje gotovinom prilikom preuzimanja pošiljke.', 1, 1,
+('cod', 'Pouzeće', 'Plaćanje gotovinom prilikom preuzimanja pošiljke.', 1, 2,
  '{"instructions":"Platite dostavljaču prilikom preuzimanja paketa."}', 'none', 0.00, 1),
-('stripe', 'Kartično plaćanje', 'Sigurno online plaćanje karticom (Visa, Mastercard).', 0, 2,
+('stripe', 'Kartično plaćanje', 'Sigurno online plaćanje karticom (Visa, Mastercard).', 0, 1,
  '{"publishable_key":"","secret_key_enc":"","webhook_secret_enc":"","sandbox":true}', 'none', 0.00, 1)
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 

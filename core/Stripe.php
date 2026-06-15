@@ -48,6 +48,7 @@ class Stripe
 
         $params = [
             'mode'                => 'payment',
+            'payment_method_types' => ['card'], // SAMO kartice — bez Bancontact/EPS/iDEAL/Sofort itd.
             'success_url'         => $successUrl,
             'cancel_url'          => $cancelUrl,
             'customer_email'      => $order['customer_email'],
