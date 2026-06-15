@@ -15,6 +15,18 @@ fiskaliziran** u Poreznoj upravi (Fiskalizacija 2.0).
 
 ---
 
+## 🛠 Ne želite sami postavljati? Postavljamo mi — 100 €
+
+Ako vam je instalacija prezahtjevna, **postavit ćemo vam cijeli ĐurđaShop** za vas — instalaciju, povezivanje s MojaĐurđa računom, fiskalizaciju, plaćanja i dizajn — za **jednokratnih 100 €**.
+
+Uz **aktivno sudjelovanje** s vaše strane:
+- osigurate **hosting** i pošaljete nam **privremene** pristupne podatke (preporuka: promijenite lozinke nakon postavljanja),
+- **sami izvadite osjetljive podatke** — FINA certifikat i registraciju kartičnog plaćanja (Stripe) — oni su vaši i ostaju pod vašom kontrolom.
+
+**Kako:** javite se na **info.djurdja@gmail.com** → nakon uplate dostavite podatke → mi sve podesimo i javimo kad je gotovo.
+
+---
+
 ## 📑 Sadržaj
 
 - [Mogućnosti](#-mogućnosti)

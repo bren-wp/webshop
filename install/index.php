@@ -388,4 +388,8 @@ $btn = $allOk
     : '<div class="err">Riješite stavke označene ✗ pa osvježite stranicu.</div>';
 inst_layout('Korak 1 / 4 — Provjera servera', '<h2>Dobrodošli! Provjerimo server.</h2>'
     . '<p class="lead">ĐurđaShop je besplatna web trgovina koja radi na bilo kojem PHP hostingu. Za rad je potreban aktivan <a href="https://mojadjurdja.com" target="_blank" rel="noopener">MojaĐurđa</a> račun — iz njega se povlače podaci o firmi i artikli te se fiskaliziraju računi.</p>'
+    . '<div style="background:#f5f7ff;border:1px solid #c7d2fe;border-radius:12px;padding:14px 16px;margin-bottom:20px;font-size:13px;line-height:1.6;color:#3730a3">'
+    . '<strong>Ne želite sami instalirati?</strong> Postavit ćemo vam cijeli shop (povezivanje s đurđom, fiskalizacija, plaćanja, dizajn) za jednokratnih <strong>100 €</strong>. '
+    . 'Vi osiguravate hosting i pošaljete nam privremene pristupne podatke te sami vadite osjetljive podatke (FINA certifikat, Stripe kartično plaćanje). '
+    . 'Javite se na <a href="mailto:info.djurdja@gmail.com">info.djurdja@gmail.com</a> — nakon uplate dostavite podatke i sve podesimo umjesto vas.</div>'
     . '<ul class="req">' . $list . '</ul><p class="muted">Napomena: za lijepe URL-ove potreban je Apache <code>mod_rewrite</code> (na 99% hostinga već uključen).</p>' . $btn, $error);

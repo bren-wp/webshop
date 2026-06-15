@@ -104,6 +104,14 @@ require __DIR__ . '/templates/header.php';
       <a class="abtn sm" style="background:#fff;color:#6d28d9;font-weight:800" href="<?= e($upgradeUrl) ?>" target="_blank">Pogledaj pakete ↗</a>
     </div>
     <?php endif; ?>
+
+    <div class="acard" style="border:1px solid #c7d2fe;background:#f5f7ff">
+      <h3>🛠 Ne želite sami postavljati?</h3>
+      <p style="font-size:13px;color:#4b5563;margin:0 0 8px">Postavit ćemo vam cijeli ĐurđaShop — povezivanje s MojaĐurđa, fiskalizaciju, plaćanja i dizajn — za jednokratnih <strong>100 €</strong>.</p>
+      <p style="font-size:12.5px;color:#6b7280;margin:0 0 6px"><strong>Vi osiguravate:</strong> hosting (i pošaljete nam privremene pristupne podatke), te sami vadite osjetljive podatke — FINA certifikat i registraciju kartičnog plaćanja (Stripe).</p>
+      <p style="font-size:12.5px;color:#6b7280;margin:0 0 10px"><strong>Kako:</strong> javite se na <a href="mailto:info.djurdja@gmail.com">info.djurdja@gmail.com</a>; nakon uplate dostavite podatke i sve podesimo umjesto vas.</p>
+      <a class="abtn sm" href="mailto:info.djurdja@gmail.com?subject=Postavljanje%20%C4%90ur%C4%91aShop-a">Zatraži postavljanje →</a>
+    </div>
   </div>
 </div>
 
