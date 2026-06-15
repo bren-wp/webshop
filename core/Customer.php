@@ -73,4 +73,36 @@ class Customer
         unset($_SESSION['customer_id']);
         session_regenerate_id(true);
     }
+
+    /**
+     * GDPR brisanje računa: osobni podaci se ANONIMIZIRAJU, a porezni/financijski
+     * zapisi (narudžbe + fiskalni računi) se ZADRŽAVAJU (zakonska obveza čuvanja) —
+     * samo im se uklone osobni podaci. Račun se trajno deaktivira (nema više prijave).
+     */
+    public static function anonymize(int $id): void
+    {
+        $db = Database::instance();
+        $c = $db->fetch('SELECT email FROM customers WHERE id = :id', [':id' => $id]);
+        if (!$c) return;
+        $anonEmail = 'obrisano+' . $id . '@anonimizirano.invalid';
+
+        // Narudžbe: ukloni osobne podatke, ZADRŽI broj/iznose/fiskalne podatke (zakon)
+        $db->query(
+            "UPDATE orders SET customer_name = 'Obrisani korisnik', customer_email = :ae,
+                 customer_phone = NULL, address = '—', city = '—', postal_code = '—', note = NULL
+             WHERE customer_id = :id",
+            [':ae' => $anonEmail, ':id' => $id]
+        );
+        // Newsletter: ukloni e-mail
+        try { $db->query('DELETE FROM newsletter_subscribers WHERE email = :e', [':e' => $c['email']]); } catch (Throwable $e) {}
+        // Profil: anonimiziraj, poništi lozinku, deaktiviraj
+        $db->update('customers', [
+            'name' => 'Obrisani korisnik',
+            'email' => $anonEmail,
+            'phone' => null, 'address' => null, 'city' => null, 'postal_code' => null,
+            'password_hash' => password_hash(bin2hex(random_bytes(18)), PASSWORD_DEFAULT),
+            'is_active' => 0,
+            'deleted_at' => date('Y-m-d H:i:s'),
+        ], 'id = :id', [':id' => $id]);
+    }
 }

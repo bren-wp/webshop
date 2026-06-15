@@ -44,6 +44,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('success', 'Lozinka promijenjena.');
         }
         redirect('moj-racun.php?v=detalji');
+    } elseif ($action === 'delete_account') {
+        if (!password_verify((string) ($_POST['confirm_password'] ?? ''), $customer['password_hash'])) {
+            flash('error', 'Lozinka nije ispravna — račun NIJE obrisan.');
+            redirect('moj-racun.php?v=detalji');
+        }
+        Customer::anonymize((int) $customer['id']);
+        Customer::logout();
+        flash('success', 'Vaš račun je obrisan, a osobni podaci anonimizirani. Računi koje zakon nalaže čuvati ostaju bez vaših osobnih podataka. Hvala što ste bili s nama.');
+        redirect('');
     }
 }
 
@@ -176,6 +185,17 @@ require __DIR__ . '/includes/header.php';
                 <div class="full"><label class="f-label">Nova lozinka (min 8)</label><input class="f-input" type="password" name="new" required minlength="8" autocomplete="new-password"></div>
               </div>
               <button class="btn btn-ghost btn-sm" style="margin-top:14px">Promijeni lozinku</button>
+            </form>
+          </div>
+          <div class="card" style="border:1px solid #fecaca">
+            <h3 style="margin-top:0;color:#b91c1c">Brisanje računa</h3>
+            <p style="font-size:13px;color:var(--c-muted);margin:0 0 12px">Trajno zatvaramo vaš račun i <strong>anonimiziramo osobne podatke</strong> (ime, e-mail, telefon, adresa). Računi koje zakon nalaže čuvati ostaju u sustavu, ali bez vaših osobnih podataka. Radnja je nepovratna.</p>
+            <form method="post" onsubmit="return confirm('Sigurno obrisati račun? Radnja je nepovratna.')">
+              <?= csrf_field() ?><input type="hidden" name="action" value="delete_account">
+              <div class="form-grid">
+                <div class="full"><label class="f-label">Potvrdite svojom lozinkom</label><input class="f-input" type="password" name="confirm_password" required autocomplete="current-password"></div>
+              </div>
+              <button class="btn btn-sm" style="margin-top:14px;background:#dc2626;border-color:#dc2626;color:#fff">Obriši moj račun</button>
             </form>
           </div>
         </div>
