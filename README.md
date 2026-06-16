@@ -1,6 +1,6 @@
 # 🛍️ ĐurđaShop — besplatna web trgovina za MojaĐurđa korisnike
 
-[![Verzija](https://img.shields.io/badge/verzija-1.4.0-7c3aed)](#)
+[![Verzija](https://img.shields.io/badge/verzija-1.5.0-7c3aed)](#)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-777bb4)](#)
 [![Licenca](https://img.shields.io/badge/licenca-besplatno%20uz%20MojaĐurđa-059669)](#-licenca-i-uvjeti-korištenja)
 
@@ -11,7 +11,7 @@ fiskaliziran** u Poreznoj upravi (Fiskalizacija 2.0).
 
 > 💜 ĐurđaShop je **besplatan** za sve MojaĐurđa korisnike — uključujući besplatni paket.
 
-**Verzija:** 1.4.0 · **Zadnje ažuriranje:** 15. lipnja 2026.
+**Verzija:** 1.5.0 · **Zadnje ažuriranje:** 16. lipnja 2026.
 
 ---
 
@@ -49,13 +49,14 @@ Uz **aktivno sudjelovanje** s vaše strane:
 - **Fiskalizacija ugrađena** — svaka plaćena narudžba dobiva JIR/ZKI kroz vaš đurđa račun; automatski ponovni pokušaj unutar zakonskog roka od 48 h
 - **Artikli, cijene i zalihe iz đurđe** — jedan cjenik za blagajnu i web; vidljivost artikala i varijante (veličine, boje…) određujete u MojaĐurđi, trgovina ih automatski preuzima
 - **Varijante proizvoda** — veličine, boje i slično, sa zasebnom cijenom i zalihom po varijanti
-- **Računi kupaca** — registracija i prijava kupaca, pregled svih narudžbi i računa kroz korisnički profil
+- **Računi kupaca** — registracija s **potvrdom e-maila**, prijava i **zaboravljena lozinka**, pregled svih narudžbi i računa kroz korisnički profil; brisanje računa uz anonimizaciju (GDPR)
+- **Recenzije proizvoda** — ocjene i recenzije ostavljaju samo prijavljeni kupci (uz moderaciju u adminu)
 - **Blog** — SEO članci koji dovode kupce s Googlea (uključuje se u plaćenom paketu)
 - **Plaćanja**: pouzeće i kartice (Stripe Checkout) — sa sklopovljem korak-po-korak vodičem
 - **Premium dizajn** — teme, vlastite boje, fontovi, hero sekcija s fotografijom/parallaxom, logo; sve bez kodiranja
 - **Automatska optimizacija slika** — svaka uploadana slika se smanjuje i dobiva thumbnail za brže učitavanje
 - **Moderan SEO** — čisti URL-ovi, schema.org (Product/Article/Organization/Breadcrumb), `sitemap.xml`, Open Graph, `llms.txt` za AI tražilice
-- **Sigurnost** — CSRF zaštita, rate limiting, enkriptirane tajne (AES-256-GCM), zaštita od botova, sigurnosni HTTP headeri
+- **Sigurnost** — CSRF zaštita, rate limiting, enkriptirane tajne (AES-256-GCM), zaštita od botova, sigurnosni HTTP headeri; tokeni za potvrdu e-maila i reset lozinke čuvaju se kao hash, jednokratni su i s rokom isteka
 - **Zakonski usklađeno (RH 2026.)** — gumb za jednostrani raskid ugovora s automatskom potvrdom, predugovorne obavijesti, stranica o pravu na popravak
 - **Hrvatski jezik**, cijene u EUR, PDV razrada po stopama (đurđa zna je li firma u sustavu PDV-a)
 
