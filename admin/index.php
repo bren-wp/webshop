@@ -60,14 +60,14 @@ $updateInfo = Updater::status();
 <?php if (!empty($_SESSION['admin_prev_login'])): ?>
   <p class="sub" style="margin:0 0 14px">🔐 Zadnja prijava: <strong><?= e(date('d.m.Y H:i', strtotime((string) $_SESSION['admin_prev_login']))) ?></strong> — ako to niste bili vi, odmah promijenite lozinku.</p>
 <?php endif; ?>
-<?php $djMin = Djurdja::minVersion() ?: (string) s('djurdja_latest_version', ''); ?>
+<?php $djMin = Djurdja::minVersion(); ?>
 <div class="acard" style="margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between">
   <div style="font-size:13.5px;line-height:1.8">
     <strong>Verzija trgovine:</strong> <?= e($updateInfo['current']) ?>
     &nbsp;·&nbsp; <strong>Najnovija (GitHub):</strong>
     <?php if ($updateInfo['checkFailed']): ?><span class="sub">nedostupno</span>
     <?php else: ?><?= e($updateInfo['latest']) ?> <?php if ($updateInfo['newer']): ?><span class="badge amber">nova</span><?php else: ?><span class="badge green">ažurno</span><?php endif; ?><?php endif; ?>
-    &nbsp;·&nbsp; <strong>Minimalna odobrena za rad (đurđa):</strong> <?= $djMin !== '' ? e($djMin) : '<span class="sub">nije postavljeno</span>' ?>
+    &nbsp;·&nbsp; <strong>Minimalna odobrena za rad (đurđa):</strong> <?= $djMin !== '' ? e($djMin) : '<span class="sub">nije postavljeno (postavljaš u đurđi → Prisila na novu verziju)</span>' ?>
   </div>
   <?php if ($updateInfo['newer'] && $updateInfo['oneClick']): ?>
     <form method="post" onsubmit="return confirm('Nadograditi na <?= e($updateInfo['latest']) ?>? Trgovina će nakratko biti u načinu održavanja.')">
