@@ -16,7 +16,7 @@ require __DIR__ . '/includes/header.php';
   <div class="page-content">
     <nav class="breadcrumbs" style="padding-left:0"><a href="<?= e(url('')) ?>">Početna</a><span class="sep">›</span><?= e($page['title']) ?></nav>
     <h1 style="margin-top:14px"><?= e($page['title']) ?></h1>
-    <div class="content"><?= $page['content'] /* HTML uređuje vlasnik u adminu */ ?></div>
+    <div class="content"><?= HtmlSanitizer::clean($page['content']) /* zaštita od XSS-a i na ispisu */ ?></div>
   </div>
 </div>
 <?php require __DIR__ . '/includes/footer.php'; ?>

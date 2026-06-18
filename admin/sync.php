@@ -111,8 +111,7 @@ require __DIR__ . '/templates/header.php';
     </div>
   <?php endif; ?>
   <div class="alert alert-info" style="margin-top:14px;font-size:12.5px">
-    💡 Automatski sync jednom dnevno: postavite hosting cron na<br>
-    <code><?= e(SITE_URL . '/api/cron.php?token=' . CRON_TOKEN) ?></code> (svakih 5–15 min — radi i fiskalne retry-e).
+    💡 Sync se izvršava automatski dok ima posjeta izlogu ili dok radite u adminu — <strong>i bez crona</strong>. Za zajamčeno izvođenje (npr. trgovina bez prometa) postavite hosting cron; puni URL s tokenom je u <a href="<?= e(adminUrl('postavke.php')) ?>">Postavke → Tehnički podaci</a> (svakih 5–15 min, radi i fiskalne retry-e).
   </div>
 </div>
 

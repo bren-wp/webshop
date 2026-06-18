@@ -22,6 +22,7 @@ $nav = [
     ['email.php', '✉️', 'E-mail postavke'],
     ['djurdja.php', '🔌', 'Đurđa veza'],
     ['postavke.php', '⚙️', 'Općenito'],
+    ['dnevnik.php', '🛡️', 'Dnevnik (audit)'],
 ];
 $statusBadge = [
     'connected' => ['green', '● Povezano s đurđom'],

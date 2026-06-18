@@ -13,9 +13,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'seo_default_description' => mb_substr(trim((string) $_POST['seo_default_description']), 0, 300),
             'show_djurdja_credit' => !empty($_POST['show_djurdja_credit']) ? '1' : '0',
         ]);
+        Audit::log('settings_updated');
         flash('success', 'Postavke spremljene.');
+    } elseif ($action === 'rotate_cron') {
+        // Rotacija cron tokena — prepiše CRON_TOKEN u config/config.php
+        $cfgFile = SHOP_ROOT . '/config/config.php';
+        $src = (string) @file_get_contents($cfgFile);
+        $newTok = bin2hex(random_bytes(24));
+        $new = preg_replace("/define\\('CRON_TOKEN',\\s*'[^']*'\\)/", "define('CRON_TOKEN', '" . $newTok . "')", $src, 1, $cnt);
+        if ($cnt === 1 && @file_put_contents($cfgFile, $new) !== false) {
+            Audit::log('cron_token_rotated');
+            flash('success', 'Cron token je promijenjen ✓ Ažurirajte cron job na hostingu novim URL-om (prikazan u tehničkim podacima).');
+        } else {
+            flash('error', 'Ne mogu zapisati config/config.php (dozvole?). Token nije promijenjen.');
+        }
     } elseif ($action === 'reset') {
-        if (trim((string) ($_POST['confirm_text'] ?? '')) !== 'OBRIŠI') {
+        if (!password_verify((string) ($_POST['admin_pass'] ?? ''), $currentAdmin['password_hash'])) {
+            flash('error', 'Pogrešna administratorska lozinka — brisanje je odbijeno.');
+        } elseif (trim((string) ($_POST['confirm_text'] ?? '')) !== 'OBRIŠI') {
             flash('error', 'Za potvrdu upišite točno: OBRIŠI (velikim slovima).');
         } else {
             $liveCnt = (int) $db->fetchColumn(
@@ -43,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $pdo->exec('SET FOREIGN_KEY_CHECKS=1');
                 Settings::set('quota_warned_for', null);
+                Audit::log('shop_reset', ['detail' => 'katalog:' . (!empty($_POST['wipe_catalog']) ? 'da' : 'ne') . ', newsletter:' . (!empty($_POST['wipe_newsletter']) ? 'da' : 'ne')]);
                 flash('success', 'Trgovina vraćena na nulu ✓ Narudžbe i računi obrisani, brojač kreće od 1.'
                     . (!empty($_POST['wipe_catalog']) ? ' Pokrenite Sinkronizaciju za ponovno povlačenje artikala iz đurđe.' : ''));
             }
@@ -56,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('error', 'Nova lozinka mora imati min. 8 znakova.');
         } else {
             $db->update('admin_users', ['password_hash' => password_hash($new, PASSWORD_DEFAULT)], 'id = :id', [':id' => $currentAdmin['id']]);
+            Audit::log('admin_password_changed');
             flash('success', 'Lozinka promijenjena.');
         }
     }
@@ -106,10 +123,20 @@ require __DIR__ . '/templates/header.php';
       <table class="atable" style="font-size:13px">
         <tr><td>Verzija trgovine</td><td><strong><?= e(SHOP_VERSION) ?></strong><?php $lv = s('djurdja_latest_version'); if ($lv && version_compare($lv, SHOP_VERSION, '>')): ?> <span class="badge amber">dostupna <?= e($lv) ?></span><?php endif; ?></td></tr>
         <tr><td>PHP</td><td><?= e(PHP_VERSION) ?></td></tr>
-        <tr><td>Cron URL</td><td><code style="font-size:11px;word-break:break-all"><?= e(SITE_URL . '/api/cron.php?token=' . CRON_TOKEN) ?></code></td></tr>
+        <tr><td>Cron URL</td><td>
+          <code id="cronUrl" style="font-size:11px;word-break:break-all" data-full="<?= e(SITE_URL . '/api/cron.php?token=' . CRON_TOKEN) ?>"><?= e(SITE_URL . '/api/cron.php?token=') ?>••••••••••</code>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+            <button type="button" class="abtn ghost sm" onclick="var c=document.getElementById('cronUrl');c.textContent=c.dataset.full;this.remove()">Prikaži</button>
+            <button type="button" class="abtn ghost sm" onclick="if(navigator.clipboard)navigator.clipboard.writeText(document.getElementById('cronUrl').dataset.full);this.textContent='Kopirano ✓'">Kopiraj URL</button>
+            <form method="post" style="display:inline" onsubmit="return confirm('Promijeniti cron token? Stari URL prestaje raditi — morat ćete ažurirati cron na hostingu.')">
+              <?= csrf_field() ?><input type="hidden" name="action" value="rotate_cron">
+              <button class="abtn ghost sm">🔄 Rotiraj token</button>
+            </form>
+          </div>
+        </td></tr>
         <tr><td>Instalirano</td><td><?= e(s('installed_at', '—')) ?></td></tr>
       </table>
-      <p class="sub" style="margin-top:10px">Cron pozivajte svakih 5–15 minuta (hosting "Cron Jobs" ili vanjski servis poput cron-job.org) — pokreće fiskalne retry-e, dnevni sync i osvježavanje veze.</p>
+      <p class="sub" style="margin-top:10px"><strong>Cron nije obavezan.</strong> Trgovina se sama održava dok ima posjeta izlogu ili dok radite u adminu (fiskalni retry, dnevni sync, osvježavanje veze). Za <em>zajamčeno</em> izvođenje i na trgovini bez prometa, postavite hosting "Cron Jobs" (ili besplatni cron-job.org) na gornji URL svakih 5–15 min.</p>
     </div>
   </div>
 </div>
@@ -125,9 +152,11 @@ require __DIR__ . '/templates/header.php';
     <label class="acheck"><input type="checkbox" name="wipe_newsletter" value="1"> Obriši i newsletter pretplatnike</label>
     <label class="acheck"><input type="checkbox" name="confirm_live" value="1"> Svjestan/na sam da se brišu i eventualni LIVE fiskalizirani računi</label>
     <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
-      <input class="ainput" name="confirm_text" placeholder="Za potvrdu upišite: OBRIŠI" style="max-width:240px" autocomplete="off">
+      <input class="ainput" type="password" name="admin_pass" placeholder="Vaša admin lozinka" style="max-width:200px" autocomplete="current-password">
+      <input class="ainput" name="confirm_text" placeholder="Za potvrdu upišite: OBRIŠI" style="max-width:220px" autocomplete="off">
       <button class="abtn danger">🧨 Vrati na nulu</button>
     </div>
+    <p class="sub" style="margin-top:8px">Potrebna je vaša admin lozinka <strong>i</strong> potvrdni tekst — dvostruka brana protiv slučajnog/zlonamjernog brisanja.</p>
   </form>
 </div>
 <?php require __DIR__ . '/templates/footer.php'; ?>

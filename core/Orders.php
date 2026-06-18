@@ -84,25 +84,45 @@ class Orders
                     'vat_rate'           => $it['vat_rate'],
                     'total'              => $it['line_total'],
                 ]);
-                // Zaliha varijante (lokalna, samo ako se prati)
-                if (!empty($it['variant_id']) && $it['variant_stock'] !== null) {
-                    $db->query(
-                        'UPDATE product_variants SET stock_qty = GREATEST(stock_qty - :q, 0) WHERE id = :id AND stock_qty IS NOT NULL',
-                        [':q' => (int) $it['qty'], ':id' => (int) $it['variant_id']]
-                    );
-                }
-                // Đurđina zaliha artikla (ukupna) — održava koherentnost do sljedećeg synca
-                if ((int) $it['track_stock'] === 1) {
-                    $db->query(
-                        'UPDATE products SET stock_qty = GREATEST(stock_qty - :q, 0) WHERE id = :id AND track_stock = 1',
-                        [':q' => (int) $it['qty'], ':id' => (int) $it['id']]
-                    );
+                $qty = (int) $it['qty'];
+                $hasVariantStock = !empty($it['variant_id']) && $it['variant_stock'] !== null;
+                $hasProductStock = (int) $it['track_stock'] === 1;
+
+                // ATOMIČNO skidanje zalihe (uvjet stock_qty >= qty). Kod istovremenih
+                // kupnji zadnjeg komada drugi UPDATE zahvati 0 redaka → throw → rollback
+                // (sprječava oversell koji provjera prije transakcije ne može uhvatiti).
+                // Mjerodavna je varijanta ako se prati, inače artikl; drugi nivo je best-effort.
+                // NB: zaseban placeholder za oduzimanje (:q) i za usporedbu (:qmin) —
+                // PDO bez emulacije (ATTR_EMULATE_PREPARES=false) ne dopušta isti :q dvaput.
+                if ($hasVariantStock) {
+                    $n = $db->query(
+                        'UPDATE product_variants SET stock_qty = stock_qty - :q WHERE id = :id AND stock_qty IS NOT NULL AND stock_qty >= :qmin',
+                        [':q' => $qty, ':qmin' => $qty, ':id' => (int) $it['variant_id']]
+                    )->rowCount();
+                    if ($n === 0) throw new RuntimeException('OUT_OF_STOCK:' . $it['name']);
+                    if ($hasProductStock) {
+                        $db->query(
+                            'UPDATE products SET stock_qty = GREATEST(stock_qty - :q, 0) WHERE id = :id AND track_stock = 1',
+                            [':q' => $qty, ':id' => (int) $it['id']]
+                        );
+                    }
+                } elseif ($hasProductStock) {
+                    $n = $db->query(
+                        'UPDATE products SET stock_qty = stock_qty - :q WHERE id = :id AND track_stock = 1 AND stock_qty IS NOT NULL AND stock_qty >= :qmin',
+                        [':q' => $qty, ':qmin' => $qty, ':id' => (int) $it['id']]
+                    )->rowCount();
+                    if ($n === 0) throw new RuntimeException('OUT_OF_STOCK:' . $it['name']);
                 }
             }
 
             $pdo->commit();
         } catch (Throwable $e) {
             $pdo->rollBack();
+            if (str_starts_with($e->getMessage(), 'OUT_OF_STOCK:')) {
+                $soldOut = substr($e->getMessage(), strlen('OUT_OF_STOCK:'));
+                error_log('[Orders::create] oversell spriječen: ' . $soldOut);
+                throw new RuntimeException('Nažalost, "' . $soldOut . '" je upravo rasprodan u traženoj količini. Osvježite košaricu i pokušajte ponovno.');
+            }
             error_log('[Orders::create] ' . $e->getMessage());
             throw new RuntimeException('Spremanje narudžbe nije uspjelo. Pokušajte ponovno.');
         }

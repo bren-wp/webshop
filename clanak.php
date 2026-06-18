@@ -51,7 +51,7 @@ require __DIR__ . '/includes/header.php';
     <div class="ba-meta">Objavljeno <?= date('d.m.Y', strtotime($post['published_at'])) ?> · <?= e(shop_name()) ?></div>
     <?php if ($cover): ?><img class="ba-cover" src="<?= e($cover) ?>" alt="<?= e($post['title']) ?>"><?php endif; ?>
     <?php if ($post['excerpt']): ?><p class="ba-lead"><?= e($post['excerpt']) ?></p><?php endif; ?>
-    <div class="content ba-content"><?= $post['content'] /* HTML iz admina (vlasnik je trusted) */ ?></div>
+    <div class="content ba-content"><?= HtmlSanitizer::clean($post['content']) /* zaštita od XSS-a i na ispisu */ ?></div>
 
     <div class="share-row" style="margin:26px 0 8px">
       <span class="lbl">Podijeli članak:</span>

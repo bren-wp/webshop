@@ -19,7 +19,22 @@ $upgradeUrl = 'https://mojadjurdja.com/cjenik?utm_source=webshop&utm_medium=admi
 
 $pageTitle = 'Nadzorna ploča';
 require __DIR__ . '/templates/header.php';
+
+// Sigurnosna upozorenja (vidljiva samo vlasniku u adminu)
+$sysWarn = [];
+if (is_dir(SHOP_ROOT . '/install')) {
+    $sysWarn[] = 'Instalacijski direktorij <code>install/</code> još postoji na serveru — iz sigurnosnih razloga <strong>obrišite ga</strong> (FTP / File Manager).';
+}
+if (defined('DEBUG') && DEBUG) {
+    $sysWarn[] = 'Uključen je <code>DEBUG</code> način rada — u produkciji ga isključite (<code>config/config.php</code> → <code>DEBUG = false</code>) da se greške ne prikazuju posjetiteljima.';
+}
 ?>
+<?php foreach ($sysWarn as $w): ?>
+  <div class="alert alert-error" style="margin-bottom:14px">⚠ <?= $w ?></div>
+<?php endforeach; ?>
+<?php if (!empty($_SESSION['admin_prev_login'])): ?>
+  <p class="sub" style="margin:0 0 14px">🔐 Zadnja prijava: <strong><?= e(date('d.m.Y H:i', strtotime((string) $_SESSION['admin_prev_login']))) ?></strong> — ako to niste bili vi, odmah promijenite lozinku.</p>
+<?php endif; ?>
 
 <div class="kpis">
   <div class="kpi"><div class="l">Narudžbe danas</div><div class="v"><?= $kpi['orders_today'] ?></div></div>

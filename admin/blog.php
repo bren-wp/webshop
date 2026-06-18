@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data = [
             'title'           => $title,
             'excerpt'         => mb_substr(trim((string) $_POST['excerpt']), 0, 500) ?: null,
-            'content'         => trim((string) $_POST['content']) ?: null,
+            'content'         => HtmlSanitizer::clean(trim((string) $_POST['content'])) ?: null,
             'is_published'    => !empty($_POST['is_published']) ? 1 : 0,
             'seo_title'       => mb_substr(trim((string) $_POST['seo_title']), 0, 190) ?: null,
             'seo_description' => mb_substr(trim((string) $_POST['seo_description']), 0, 300) ?: null,
@@ -126,8 +126,8 @@ require __DIR__ . '/templates/header.php';
       <div class="aform-grid">
         <div class="full"><label class="al">Naslov *</label><input class="ainput" name="title" required maxlength="255" value="<?= e($post['title'] ?? '') ?>"></div>
         <div class="full"><label class="al">Kratki uvod (prikazuje se na kartici i u SEO)</label><textarea class="ainput" name="excerpt" rows="2" maxlength="500"><?= e($post['excerpt'] ?? '') ?></textarea></div>
-        <div class="full"><label class="al">Sadržaj (HTML dozvoljen: &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;img&gt;, &lt;a&gt;…)</label>
-          <textarea class="ainput" name="content" rows="14" placeholder="<h2>Podnaslov</h2>&#10;<p>Tekst članka…</p>"><?= e($post['content'] ?? '') ?></textarea></div>
+        <div class="full"><label class="al">Sadržaj članka</label>
+          <?php $wzName = 'content'; $wzContent = $post['content'] ?? ''; require __DIR__ . '/templates/wysiwyg.php'; ?></div>
         <div><label class="al">Naslovna slika (JPG/PNG/WEBP — automatski se optimizira)</label><input class="ainput" type="file" name="cover" accept="image/jpeg,image/png,image/webp"></div>
         <div style="display:flex;align-items:end">
           <?php if (!empty($post['cover_image'])): ?>

@@ -40,6 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $driver = s('mail_driver', 'mail');
+$emailLog = [];
+try { $emailLog = $db->fetchAll('SELECT * FROM email_log ORDER BY id DESC LIMIT 30'); } catch (Throwable $e) {}
 $pageTitle = 'E-mail postavke';
 require __DIR__ . '/templates/header.php';
 ?>
@@ -89,6 +91,25 @@ require __DIR__ . '/templates/header.php';
         <input class="ainput" type="email" name="test_to" required placeholder="vasa@adresa.hr" value="<?= e($currentAdmin['email'] ?? '') ?>">
         <button class="abtn sm">📨 Pošalji test</button>
       </form>
+    </div>
+
+    <div class="acard">
+      <h3>Zadnji poslani mailovi</h3>
+      <p class="sub">Dijagnostika dostave — bilježi se svaki pokušaj (potvrde narudžbi, računi, potvrde e-maila, reset lozinke…).</p>
+      <table class="atable" style="font-size:12.5px">
+        <thead><tr><th>Vrijeme</th><th>Primatelj</th><th>Predmet</th><th>Status</th></tr></thead>
+        <tbody>
+        <?php foreach ($emailLog as $em): ?>
+          <tr>
+            <td style="white-space:nowrap"><?= e(date('d.m. H:i', strtotime((string) $em['created_at']))) ?></td>
+            <td><?= e($em['recipient']) ?></td>
+            <td><?= e(mb_strimwidth((string) $em['subject'], 0, 38, '…')) ?></td>
+            <td><span class="badge <?= $em['status'] === 'sent' ? 'green' : 'red' ?>"<?= $em['error'] ? ' title="' . e($em['error']) . '"' : '' ?>><?= $em['status'] === 'sent' ? 'poslano' : 'greška' ?></span></td>
+          </tr>
+        <?php endforeach; ?>
+        <?php if (!$emailLog): ?><tr><td colspan="4" style="color:#8b90a0">Još nema zapisa.</td></tr><?php endif; ?>
+        </tbody>
+      </table>
     </div>
   </div>
 

@@ -20,27 +20,43 @@ class Mailer
         $html = self::wrap($htmlBody);
 
         if (s('mail_driver', 'mail') === 'smtp') {
-            return Smtp::send([
+            $ok = Smtp::send([
                 'host'   => (string) s('smtp_host', ''),
                 'port'   => (int) s('smtp_port', 587),
                 'secure' => (string) s('smtp_secure', 'tls'),
                 'user'   => (string) s('smtp_user', ''),
                 'pass'   => (string) (Crypto::decrypt(s('smtp_pass_enc')) ?? ''),
             ], $from, $fromName, $to, $subject, $html, $err);
+        } else {
+            $headers = [
+                'MIME-Version: 1.0',
+                'Content-Type: text/html; charset=UTF-8',
+                'From: ' . mb_encode_mimeheader($fromName, 'UTF-8') . ' <' . $from . '>',
+                'Reply-To: ' . $from,
+                'X-Mailer: DjurdjaShop',
+            ];
+            $ok = @mail($to, mb_encode_mimeheader($subject, 'UTF-8'), $html, implode("\r\n", $headers));
+            if (!$ok) {
+                $err = 'PHP mail() nije uspio — ovaj hosting vjerojatno traži SMTP. Otvorite E-mail postavke i odaberite SMTP.';
+            }
         }
-
-        $headers = [
-            'MIME-Version: 1.0',
-            'Content-Type: text/html; charset=UTF-8',
-            'From: ' . mb_encode_mimeheader($fromName, 'UTF-8') . ' <' . $from . '>',
-            'Reply-To: ' . $from,
-            'X-Mailer: DjurdjaShop',
-        ];
-        $ok = @mail($to, mb_encode_mimeheader($subject, 'UTF-8'), $html, implode("\r\n", $headers));
-        if (!$ok) {
-            $err = 'PHP mail() nije uspio — ovaj hosting vjerojatno traži SMTP. Otvorite E-mail postavke i odaberite SMTP.';
-        }
+        self::logEmail($to, $subject, $ok, $err);
         return $ok;
+    }
+
+    /** Zapiši pokušaj slanja u email_log (dijagnostika u adminu). Nikad ne baca. */
+    private static function logEmail(string $to, string $subject, bool $ok, ?string $err): void
+    {
+        try {
+            Database::instance()->insert('email_log', [
+                'recipient' => mb_substr($to, 0, 190),
+                'subject'   => mb_substr($subject, 0, 255),
+                'status'    => $ok ? 'sent' : 'failed',
+                'error'     => $err ? mb_substr($err, 0, 255) : null,
+            ]);
+        } catch (Throwable $e) {
+            error_log('[Mailer] email_log: ' . $e->getMessage());
+        }
     }
 
     /** Testna poruka za admin (vraća ['ok'=>bool, 'error'=>?string]). */

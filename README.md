@@ -1,6 +1,6 @@
 # 🛍️ ĐurđaShop — besplatna web trgovina za MojaĐurđa korisnike
 
-[![Verzija](https://img.shields.io/badge/verzija-1.5.0-7c3aed)](#)
+[![Verzija](https://img.shields.io/badge/verzija-1.6.0-7c3aed)](#)
 [![PHP](https://img.shields.io/badge/PHP-8.0%2B-777bb4)](#)
 [![Licenca](https://img.shields.io/badge/licenca-besplatno%20uz%20MojaĐurđa-059669)](#-licenca-i-uvjeti-korištenja)
 
@@ -11,7 +11,7 @@ fiskaliziran** u Poreznoj upravi (Fiskalizacija 2.0).
 
 > 💜 ĐurđaShop je **besplatan** za sve MojaĐurđa korisnike — uključujući besplatni paket.
 
-**Verzija:** 1.5.0 · **Zadnje ažuriranje:** 16. lipnja 2026.
+**Verzija:** 1.6.0 · **Zadnje ažuriranje:** 18. lipnja 2026.
 
 ---
 
@@ -51,12 +51,13 @@ Uz **aktivno sudjelovanje** s vaše strane:
 - **Varijante proizvoda** — veličine, boje i slično, sa zasebnom cijenom i zalihom po varijanti
 - **Računi kupaca** — registracija s **potvrdom e-maila**, prijava i **zaboravljena lozinka**, pregled svih narudžbi i računa kroz korisnički profil; brisanje računa uz anonimizaciju (GDPR)
 - **Recenzije proizvoda** — ocjene i recenzije ostavljaju samo prijavljeni kupci (uz moderaciju u adminu)
-- **Blog** — SEO članci koji dovode kupce s Googlea (uključuje se u plaćenom paketu)
+- **Blog i CMS stranice** — vizualni (WYSIWYG) uređivač sa zaštitom od XSS-a; SEO članci koji dovode kupce s Googlea (blog u plaćenom paketu)
+- **Newsletter** — dvostruka potvrda prijave (double opt-in) + odjava jednim klikom (GDPR)
 - **Plaćanja**: pouzeće i kartice (Stripe Checkout) — sa sklopovljem korak-po-korak vodičem
 - **Premium dizajn** — teme, vlastite boje, fontovi, hero sekcija s fotografijom/parallaxom, logo; sve bez kodiranja
 - **Automatska optimizacija slika** — svaka uploadana slika se smanjuje i dobiva thumbnail za brže učitavanje
 - **Moderan SEO** — čisti URL-ovi, schema.org (Product/Article/Organization/Breadcrumb), `sitemap.xml`, Open Graph, `llms.txt` za AI tražilice
-- **Sigurnost** — CSRF zaštita, rate limiting, enkriptirane tajne (AES-256-GCM), zaštita od botova, sigurnosni HTTP headeri; tokeni za potvrdu e-maila i reset lozinke čuvaju se kao hash, jednokratni su i s rokom isteka
+- **Sigurnost** — CSRF, rate limiting, enkriptirane tajne (AES-256-GCM), zaštita od botova, sigurnosni HTTP headeri; **sanitizacija HTML-a (anti-XSS)** na blogu/stranicama/opisima, **dnevnik (audit log)** admin akcija, automatska odjava nakon neaktivnosti, dvostruka potvrda za brisanje podataka, maskiran/rotabilan cron token, atomično skidanje zalihe; tokeni (potvrda e-maila/reset) čuvani kao hash, jednokratni i s istekom
 - **Zakonski usklađeno (RH 2026.)** — gumb za jednostrani raskid ugovora s automatskom potvrdom, predugovorne obavijesti, stranica o pravu na popravak
 - **Hrvatski jezik**, cijene u EUR, PDV razrada po stopama (đurđa zna je li firma u sustavu PDV-a)
 
@@ -118,7 +119,7 @@ Kupac → Trgovina (vaš server) → MojaĐurđa API → Porezna uprava (CIS)
 - Svaka fiskalizirana narudžba troši **1 dokument** iz mjesečne kvote vašeg đurđa paketa
   (besplatni paket: 30 dokumenata/mj — dijeli se s blagajnom). Stanje kvote vidite na nadzornoj ploči.
 - Ako se kvota potroši, narudžba se **rezervira** (bez greške) i fiskalizirate je ručno kad nadogradite paket.
-- **Fiskaliziraju se isključivo artikli** — dostava i naknade plaćanja nisu dio fiskalnog računa.
+- Na fiskalni račun ulazi **cijeli iznos koji kupac plaća** — artikli **i dostava** (te naknada plaćanja ako postoji), sa svojim stopama PDV-a. Dostava se zbraja kao i artikli (s PDV-om ako je firma u sustavu PDV-a, bez ako nije).
 
 ---
 

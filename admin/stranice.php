@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $title = mb_substr(trim((string) $_POST['title']), 0, 255);
         $data = [
             'title' => $title ?: 'Stranica',
-            'content' => (string) $_POST['content'],
+            'content' => HtmlSanitizer::clean((string) $_POST['content']),
             'is_visible' => !empty($_POST['is_visible']) ? 1 : 0,
             'in_nav' => !empty($_POST['in_nav']) ? 1 : 0,
             'in_footer' => !empty($_POST['in_footer']) ? 1 : 0,
@@ -68,7 +68,10 @@ require __DIR__ . '/templates/header.php';
       <?= csrf_field() ?><input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?= (int) ($edit['id'] ?? 0) ?>">
       <div class="aform-grid">
         <div class="full"><label class="al">Naslov</label><input class="ainput" name="title" required maxlength="255" value="<?= e($edit['title'] ?? '') ?>"></div>
-        <div class="full"><label class="al">Sadržaj (HTML)</label><textarea class="ainput" name="content" rows="14" style="font-family:ui-monospace,monospace;font-size:12.5px"><?= e($edit['content'] ?? '') ?></textarea></div>
+        <div class="full">
+          <label class="al">Sadržaj</label>
+          <?php $wzName = 'content'; $wzContent = $edit['content'] ?? ''; require __DIR__ . '/templates/wysiwyg.php'; ?>
+        </div>
         <div><label class="al">SEO naslov</label><input class="ainput" name="seo_title" maxlength="190" value="<?= e($edit['seo_title'] ?? '') ?>"></div>
         <div><label class="al">Redoslijed</label><input class="ainput" type="number" name="sort_order" value="<?= (int) ($edit['sort_order'] ?? 0) ?>"></div>
         <div class="full"><label class="al">SEO opis</label><textarea class="ainput" name="seo_description" rows="2" maxlength="300"><?= e($edit['seo_description'] ?? '') ?></textarea></div>

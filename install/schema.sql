@@ -309,7 +309,32 @@ CREATE TABLE IF NOT EXISTS newsletter_subscribers (
     email VARCHAR(190) NOT NULL UNIQUE,
     token VARCHAR(64) NOT NULL,
     is_confirmed TINYINT(1) NOT NULL DEFAULT 0,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_news_token (token)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_croatian_ci;
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT UNSIGNED NULL,
+    admin_name VARCHAR(60) NULL,
+    action VARCHAR(60) NOT NULL,
+    entity_type VARCHAR(40) NULL,
+    entity_id VARCHAR(40) NULL,
+    detail VARCHAR(255) NULL,
+    ip VARCHAR(45) NOT NULL DEFAULT '',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_audit_created (created_at),
+    INDEX idx_audit_action (action, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_croatian_ci;
+
+CREATE TABLE IF NOT EXISTS email_log (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    recipient VARCHAR(190) NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    status ENUM('sent','failed') NOT NULL,
+    error VARCHAR(255) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_email_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_croatian_ci;
 
 -- ============================================================
@@ -322,8 +347,8 @@ INSERT INTO payment_methods (code, name, description, is_active, sort_order, con
  '{"publishable_key":"","secret_key_enc":"","webhook_secret_enc":"","sandbox":true}', 'none', 0.00, 1)
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 
--- Verzija sheme (mora odgovarati Migrations::TARGET)
-INSERT INTO settings (k, v) VALUES ('schema_version', '3')
+-- Verzija sheme (mora odgovarati Migrations::TARGET; installer ju i eksplicitno postavi)
+INSERT INTO settings (k, v) VALUES ('schema_version', '8')
 ON DUPLICATE KEY UPDATE v = VALUES(v);
 
 -- ============================================================

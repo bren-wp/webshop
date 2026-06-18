@@ -17,6 +17,14 @@ if (!$currentAdmin) {
     redirect('admin/login.php');
 }
 
+// Auto-odjava nakon 2 h neaktivnosti (zaštita na uredskom/dijeljenom računalu)
+if (isset($_SESSION['admin_last_activity']) && (time() - (int) $_SESSION['admin_last_activity']) > 7200) {
+    $_SESSION = [];
+    session_destroy();
+    redirect('admin/login.php');
+}
+$_SESSION['admin_last_activity'] = time();
+
 // Povremeno tiho osvježi đurđa keš (1:3 učitavanja admina)
 if (random_int(1, 3) === 1) {
     Djurdja::maybeRefresh();

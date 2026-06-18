@@ -18,12 +18,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($admin && password_verify($password, $admin['password_hash'])) {
             session_regenerate_id(true);
             $_SESSION['admin_id'] = (int) $admin['id'];
+            $_SESSION['admin_prev_login'] = $admin['last_login_at']; // za prikaz "zadnja prijava"
+            $_SESSION['admin_last_activity'] = time();
             $db->update('admin_users', ['last_login_at' => date('Y-m-d H:i:s')], 'id = :id', [':id' => $admin['id']]);
             Security::clearAttempts($rlKey);
+            Audit::log('admin_login', ['admin_name' => $admin['username']]);
             Djurdja::maybeRefresh();
             redirect('admin/');
         }
         Security::recordAttempt($rlKey);
+        Audit::log('admin_login_failed', ['detail' => 'korisnik: ' . mb_substr($username, 0, 60)]);
         $error = 'Pogrešno korisničko ime ili lozinka.';
     }
 }

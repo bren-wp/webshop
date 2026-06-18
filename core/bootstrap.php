@@ -12,7 +12,7 @@
  * bootstrap — uključuje ga svaka javna stranica, API endpoint i admin init.
  */
 
-define('SHOP_VERSION', '1.5.0');
+define('SHOP_VERSION', '1.6.0');
 define('SHOP_ROOT', dirname(__DIR__));
 
 // ── 1. Config (ako ne postoji → installer) ──
@@ -50,8 +50,22 @@ function is_https(): bool
 }
 if (!defined('SITE_URL')) {
     $proto = is_https() ? 'https' : 'http';
-    $host  = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    define('SITE_URL', $proto . '://' . $host . BASE_URL);
+    if (defined('APP_URL') && APP_URL !== '') {
+        // Fiksni canonical URL iz configa (installer ga upiše) — potpuno imun na Host header poisoning.
+        define('SITE_URL', rtrim((string) APP_URL, '/'));
+    } else {
+        // HTTP_HOST je lažljiv (napadač podvali tuđi host → otrovani reset linkovi,
+        // potvrde e-maila, canonical, sitemap). Zato: validiraj i ZAPAMTI prvi
+        // ispravan host pa ga ubuduće koristi bez obzira što stigne u zaglavlju.
+        $rawHost   = (string) ($_SERVER['HTTP_HOST'] ?? '');
+        $validHost = preg_match('/^[a-z0-9.\-]+(:[0-9]{1,5})?$/i', $rawHost) ? $rawHost : '';
+        $pinned    = (string) Settings::get('canonical_host', '');
+        if ($pinned === '' && $validHost !== '') {
+            try { Settings::set('canonical_host', $validHost); $pinned = $validHost; } catch (Throwable $e) {}
+        }
+        $host = $pinned !== '' ? $pinned : ($validHost !== '' ? $validHost : 'localhost');
+        define('SITE_URL', $proto . '://' . $host . BASE_URL);
+    }
 }
 
 // ── 5. DB ── (pad baze NIKAD ne smije dati sirovi 500)
@@ -139,8 +153,13 @@ function upload_url(string $path): string
 
 function redirect(string $to): void
 {
-    if (!preg_match('#^https?://#', $to)) $to = url($to);
-    header('Location: ' . $to);
+    // Zaštita od open-redirecta: dopuštene su SAMO interne putanje. Apsolutni
+    // (http://, javascript:…), protokol-relativni (//host) i CR/LF-injektirani
+    // ciljevi se odbacuju i preusmjeravaju na početnu.
+    if (preg_match('#^[a-z][a-z0-9+.\-]*:#i', $to) || str_starts_with($to, '//') || preg_match('/[\r\n]/', $to)) {
+        $to = '';
+    }
+    header('Location: ' . url($to));
     exit;
 }
 
@@ -213,8 +232,18 @@ function slugify(string $text): string
 
 function client_ip(): string
 {
-    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
-    return substr(trim(explode(',', $ip)[0]), 0, 45);
+    $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+    // X-Forwarded-For napadač može lažirati radi zaobilaženja rate-limita
+    // (login, checkout, reset lozinke…). Vjerujemo mu SAMO ako zahtjev stiže s
+    // pouzdanog proxyja navedenog u config TRUSTED_PROXIES (CSV IP-ova).
+    if (defined('TRUSTED_PROXIES') && TRUSTED_PROXIES !== '' && $remote !== '') {
+        $trusted = array_filter(array_map('trim', explode(',', (string) TRUSTED_PROXIES)));
+        if (in_array($remote, $trusted, true)) {
+            $xff = trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''))[0]);
+            if ($xff !== '') return substr($xff, 0, 45);
+        }
+    }
+    return substr($remote, 0, 45);
 }
 
 function shop_name(): string

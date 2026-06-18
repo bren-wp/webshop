@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', 'Status ažuriran.');
     } elseif ($action === 'mark_paid') {
         $res = Orders::markPaid($id, 'admin-' . $currentAdmin['id']);
+        Audit::log('order_marked_paid', ['entity_type' => 'order', 'entity_id' => $id, 'detail' => $order['order_number'] ?? '']);
         if (!empty($res['fiscal']['success'])) {
             flash('success', 'Označeno plaćenim i fiskalizirano (račun ' . ($res['fiscal']['receiptNumber'] ?? '') . ').');
         } elseif (isset($res['fiscal'])) {
@@ -24,16 +25,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'fiscalize') {
         $res = Fiscalizer::fiscalizeOrder($db, $id);
+        Audit::log('fiscalize', ['entity_type' => 'order', 'entity_id' => $id, 'detail' => $res['success'] ? ('račun ' . ($res['receiptNumber'] ?? '')) : ('greška: ' . ($res['error'] ?? ''))]);
         flash($res['success'] ? 'success' : 'error', $res['success']
             ? 'Fiskalizirano — račun ' . ($res['receiptNumber'] ?? '')
             : 'Fiskalizacija: ' . ($res['error'] ?? 'greška'));
     } elseif ($action === 'storno') {
         $res = Fiscalizer::stornoOrder($db, $id, trim((string) ($_POST['reason'] ?? 'Povrat')));
+        Audit::log('storno', ['entity_type' => 'order', 'entity_id' => $id, 'detail' => $res['success'] ? ('storno ' . ($res['stornoReceiptNumber'] ?? '')) : ('greška: ' . ($res['error'] ?? ''))]);
         flash($res['success'] ? 'success' : 'error', $res['success']
             ? 'Storniran — storno račun ' . ($res['stornoReceiptNumber'] ?? '')
             : 'Storno: ' . ($res['error'] ?? 'greška'));
     } elseif ($action === 'cancel') {
         Orders::cancel($id);
+        Audit::log('order_cancelled', ['entity_type' => 'order', 'entity_id' => $id, 'detail' => $order['order_number'] ?? '']);
         flash('success', 'Narudžba otkazana, zaliha vraćena.');
     } elseif ($action === 'send_receipt') {
         if (in_array($order['fiscal_status'], ['fiscalized', 'stornoed'], true)) {

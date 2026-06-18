@@ -192,6 +192,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->exec($stmt);
                 }
 
+                // Trenutne verzije iz koda (bez drift-a installer ↔ kod)
+                require_once $ROOT . '/core/Migrations.php';
+                $bootSrc = (string) @file_get_contents($ROOT . '/core/bootstrap.php');
+                $shopVer = preg_match("/define\\('SHOP_VERSION',\\s*'([^']+)'\\)/", $bootSrc, $vm) ? $vm[1] : '1.0.0';
+
                 // 2. Generiraj tajne i config.php
                 $encKey = bin2hex(random_bytes(32));
                 $cronToken = bin2hex(random_bytes(24));
@@ -199,6 +204,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $baseUrl = rtrim(str_replace('\\', '/', dirname($scriptDir)), '/');   // parent
                 if ($baseUrl === '/' || $baseUrl === '\\' || $baseUrl === '.') $baseUrl = '';
                 $mockVal = !empty($S['djurdja']['mock']) ? 'true' : 'false';
+
+                // Fiksni canonical URL — zapamtimo host s kojeg vlasnik instalira (pouzdan
+                // trenutak) pa kasnije linkovi u e-mailu/canonical NE ovise o HTTP_HOST-u.
+                $instProto = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https')) ? 'https' : 'http';
+                $instHost = preg_match('/^[a-z0-9.\-]+(:[0-9]{1,5})?$/i', (string) ($_SERVER['HTTP_HOST'] ?? '')) ? (string) $_SERVER['HTTP_HOST'] : '';
+                $appUrl = $instHost !== '' ? $instProto . '://' . $instHost . $baseUrl : '';
 
                 $cfg = "<?php\n"
                     . "// ĐurđaShop konfiguracija — generirano " . date('Y-m-d H:i:s') . ". NE dijeliti, NE stavljati u git.\n"
@@ -209,6 +220,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     . "define('ENCRYPTION_KEY', '$encKey');\n"
                     . "define('CRON_TOKEN', '$cronToken');\n"
                     . "define('BASE_URL', '" . addslashes($baseUrl) . "');\n"
+                    . "define('APP_URL', '" . addslashes($appUrl) . "');\n"
+                    . "define('TRUSTED_PROXIES', '');\n"
                     . "define('DJURDJA_MOCK', $mockVal);\n"
                     . "define('DEBUG', false);\n";
                 if (file_put_contents($configFile, $cfg) === false) {
@@ -239,9 +252,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'shipping_free_over' => '50.00',
                     'products_per_page' => '12',
                     'installed_at' => date('Y-m-d H:i:s'),
-                    'shop_version' => '1.0.0',
+                    'shop_version' => $shopVer,
+                    'schema_version' => (string) Migrations::TARGET,
                 ];
                 foreach ($settings as $k => $v) $ins->execute([$k, $v]);
+
+                // 4a. Direktoriji za upload — MORAJU postojati prije kopiranja hero slike
+                @mkdir($ROOT . '/uploads/products', 0775, true);
+                @mkdir($ROOT . '/uploads/theme', 0775, true);
+                @mkdir($ROOT . '/logs', 0775, true);
 
                 // 4b. Zadana hero fotografija — trgovina odmah izgleda dovršeno
                 if (is_file($ROOT . '/assets/img/hero-default.png')
@@ -256,12 +275,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare('INSERT INTO admin_users (username, email, password_hash) VALUES (?, ?, ?)')
                     ->execute([$adminUser, $adminEmail, password_hash($pass1, PASSWORD_DEFAULT)]);
 
-                // 6. Direktoriji
-                @mkdir($ROOT . '/uploads/products', 0775, true);
-                @mkdir($ROOT . '/uploads/theme', 0775, true);
-                @mkdir($ROOT . '/logs', 0775, true);
-
-                // 7. Lock
+                // 6. Lock — installer se nakon ovoga odbija ponovno pokrenuti
                 file_put_contents($lockFile, date('c'));
                 unset($_SESSION['djinst']);
                 $S = ['done_base' => $baseUrl];

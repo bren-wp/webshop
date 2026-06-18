@@ -5,11 +5,14 @@
 # Listanje direktorija sprječavaju prazni index.html u uploads/.
 # ============================================================
 
-# Blokiraj skrivene datoteke (.git, .env, .lock…)
+# Blokiraj skrivene datoteke (.git, .env, .lock…) i osjetljive datoteke/arhive
 <FilesMatch "^\.">
     Require all denied
 </FilesMatch>
-<FilesMatch "\.(sql|log|md|lock|sample\.php)$">
+<FilesMatch "\.(sql|log|md|lock|sample\.php|env|ini|yml|yaml|bak|backup|old|orig|save|swp|zip|tar|gz|tgz|7z|rar|sh)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^(composer\.(json|lock)|package(-lock)?\.json|config\.php)$">
     Require all denied
 </FilesMatch>
 
@@ -36,12 +39,17 @@
 # Keširanje statike
 <IfModule mod_expires.c>
     ExpiresActive On
-    ExpiresByType image/jpeg "access plus 30 days"
-    ExpiresByType image/png "access plus 30 days"
-    ExpiresByType image/webp "access plus 30 days"
-    ExpiresByType image/svg+xml "access plus 30 days"
+    ExpiresByType image/jpeg "access plus 180 days"
+    ExpiresByType image/png "access plus 180 days"
+    ExpiresByType image/webp "access plus 180 days"
+    ExpiresByType image/svg+xml "access plus 180 days"
     ExpiresByType text/css "access plus 7 days"
     ExpiresByType application/javascript "access plus 7 days"
+</IfModule>
+
+# Kompresija (ako hosting podržava) — manji prijenos, brže učitavanje
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml application/javascript application/json image/svg+xml
 </IfModule>
 
 AddDefaultCharset utf-8

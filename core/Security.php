@@ -16,7 +16,7 @@ class Security
             . "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
             . "font-src 'self' https://fonts.gstatic.com; "
             . "script-src 'self' 'unsafe-inline'; "
-            . "connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; "
+            . "connect-src 'self'; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; "
             . "form-action 'self' https://checkout.stripe.com");
         if (is_https()) {
             header('Strict-Transport-Security: max-age=31536000');

@@ -27,11 +27,25 @@ try {
         $paid = ($object['payment_status'] ?? '') === 'paid';
         $orderId = (int) ($object['metadata']['order_id'] ?? $object['client_reference_id'] ?? 0);
         if ($paid && $orderId > 0) {
-            Orders::markPaid($orderId, (string) ($object['payment_intent'] ?? $object['id'] ?? ''), [
-                'stripe_event' => $type,
-                'session_id'   => $object['id'] ?? null,
-                'amount_total' => $object['amount_total'] ?? null,
-            ]);
+            $order = Database::instance()->fetch('SELECT total FROM orders WHERE id = :id', [':id' => $orderId]);
+            // Ne vjeruj samo "paid" statusu — provjeri iznos i valutu (zaštita od krive
+            // sesije / podvale). amount_total je u centima; toleriraj 1c zaokruživanja.
+            $expectCents = $order ? (int) round(((float) $order['total']) * 100) : -1;
+            $gotCents    = (int) ($object['amount_total'] ?? 0);
+            $currency    = strtolower((string) ($object['currency'] ?? ''));
+            if (!$order) {
+                error_log("[stripe-webhook] nepoznata narudžba #$orderId (session " . ($object['id'] ?? '?') . ')');
+            } elseif ($currency !== 'eur' || abs($gotCents - $expectCents) > 1) {
+                error_log("[stripe-webhook] NEPODUDARANJE iznosa/valute narudžbe #$orderId: očekivano {$expectCents}c EUR, primljeno {$gotCents}c {$currency} — NIJE označeno plaćenim.");
+            } else {
+                // markPaid je idempotentan (preskače već plaćene) → ponovljeni event je siguran
+                Orders::markPaid($orderId, (string) ($object['payment_intent'] ?? $object['id'] ?? ''), [
+                    'stripe_event' => $type,
+                    'session_id'   => $object['id'] ?? null,
+                    'amount_total' => $gotCents,
+                    'currency'     => $currency,
+                ]);
+            }
         }
     } elseif ($type === 'checkout.session.async_payment_failed' || $type === 'checkout.session.expired') {
         $orderId = (int) ($object['metadata']['order_id'] ?? $object['client_reference_id'] ?? 0);

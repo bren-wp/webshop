@@ -24,6 +24,18 @@ define('CRON_TOKEN', '');
 // ── Bazna putanja instalacije ('' za root domene, '/shop' za poddirektorij) ──
 define('BASE_URL', '');
 
+// ── Fiksni adresa trgovine (npr. 'https://trgovina.hr' ili 'https://trgovina.hr/shop') ──
+// Installer ju upiše automatski. Sprječava "Host header poisoning": svi linkovi u
+// e-mailovima (reset lozinke, potvrda), canonical i sitemap koriste OVU adresu, a ne
+// ono što stigne u HTTP zaglavlju. Ostavite prazno samo ako stvarno ne znate adresu.
+define('APP_URL', '');
+
+// ── Pouzdani proxy/load-balancer IP-ovi (CSV) — npr. '10.0.0.1,10.0.0.2' ──
+// SAMO ako je trgovina iza Cloudflarea/reverse-proxyja čita se X-Forwarded-For za
+// pravu IP adresu kupca. Prazno (default) = koristi se samo REMOTE_ADDR (sigurno na
+// klasičnom shared hostingu; sprječava lažiranje IP-a i zaobilaženje rate-limita).
+define('TRUSTED_PROXIES', '');
+
 // ── Development: true = đurđa API se simulira lokalno (mock), NE zove pravi server ──
 define('DJURDJA_MOCK', false);
 

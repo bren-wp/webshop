@@ -46,7 +46,7 @@ $related = $db->fetchAll(
         (SELECT COUNT(*) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_active = 1) AS has_variants
      FROM products p LEFT JOIN categories c ON c.id = p.category_id
      WHERE p.is_visible = 1 AND p.is_orphaned = 0 AND p.id != :id' . ($product['category_id'] ? ' AND p.category_id = :cid' : '') . '
-     ORDER BY RAND() LIMIT 4',
+     ORDER BY p.is_featured DESC, p.created_at DESC LIMIT 4',
     array_merge([':id' => $product['id']], $product['category_id'] ? [':cid' => $product['category_id']] : [])
 );
 
@@ -214,7 +214,7 @@ require __DIR__ . '/includes/header.php';
   <?php if ($product['description']): ?>
     <div class="pd-desc">
       <h2>Opis proizvoda</h2>
-      <div class="content"><?= $product['description'] /* HTML iz admina (vlasnik je trusted) */ ?></div>
+      <div class="content"><?= HtmlSanitizer::clean($product['description']) /* zaštita od XSS-a i na ispisu */ ?></div>
     </div>
   <?php endif; ?>
 

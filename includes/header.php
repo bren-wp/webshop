@@ -6,6 +6,14 @@
 $pageTitle = $pageTitle ?? '';
 $pageDesc = $pageDesc ?? '';
 
+// Privatne stranice (košarica, checkout, račun, prijava, reset lozinke…) NE u tražilice.
+$pageNoindex = ($pageNoindex ?? false) || in_array(
+    basename($_SERVER['SCRIPT_NAME'] ?? ''),
+    ['prijava.php', 'moj-racun.php', 'kosarica.php', 'narudzba.php', 'narudzba-potvrda.php', 'zaboravljena-lozinka.php', 'reset-lozinke.php', 'potvrda-maila.php'],
+    true
+);
+if ($pageNoindex && !headers_sent()) header('X-Robots-Tag: noindex, nofollow');
+
 // Prisila na update: đurđa centralno postavi minShopVersion → prestare
 // instalacije zaključaju IZLOG (admin radi da vlasnik vidi uputu i ažurira)
 if (Djurdja::versionBlocked()) {
@@ -54,6 +62,7 @@ $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
+<?php if ($pageNoindex): ?><meta name="robots" content="noindex,nofollow"><?php endif; ?>
 <?= Seo::meta($pageTitle, $pageDesc, $pageCanonical ?? null, $pageOgImage ?? null, $pageType ?? 'website') ?>
 <?= Theme::head() ?>
 <link rel="stylesheet" href="<?= e(asset('css/style.css')) ?>">

@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save') {
         // Vidljivost se NE sprema ovdje — određuje je đurđa (Web trgovina → Artikli)
         $db->update('products', [
-            'description'     => trim((string) $_POST['description']) ?: null,
+            'description'     => HtmlSanitizer::clean(trim((string) $_POST['description'])) ?: null,
             'seo_title'       => mb_substr(trim((string) $_POST['seo_title']), 0, 190) ?: null,
             'seo_description' => mb_substr(trim((string) $_POST['seo_description']), 0, 300) ?: null,
             'is_featured'     => !empty($_POST['is_featured']) ? 1 : 0,
