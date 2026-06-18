@@ -62,5 +62,18 @@
   } catch (e) {}
 })();
 </script>
+<script>
+/* Mobilni izbornik — otvori/zatvori bočnu ladicu */
+(function () {
+  var h = document.querySelector('[data-adm-menu]');
+  var s = document.querySelector('.adm-side');
+  var b = document.querySelector('[data-adm-backdrop]');
+  if (!h || !s) return;
+  function close() { s.classList.remove('open'); if (b) b.classList.remove('show'); }
+  h.addEventListener('click', function () { s.classList.toggle('open'); if (b) b.classList.toggle('show'); });
+  if (b) b.addEventListener('click', close);
+  s.querySelectorAll('a.nav').forEach(function (a) { a.addEventListener('click', close); });
+})();
+</script>
 </body>
 </html>

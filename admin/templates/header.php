@@ -57,9 +57,15 @@ $statusBadge = [
       <a class="nav" href="<?= e(adminUrl('logout.php')) ?>"><span class="ic">🚪</span> Odjava</a>
     </div>
   </aside>
+  <div class="adm-backdrop" data-adm-backdrop></div>
   <div class="adm-main">
     <div class="adm-top">
-      <h1><?= e($pageTitle) ?></h1>
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">
+        <button class="adm-hamb" type="button" data-adm-menu aria-label="Izbornik">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <h1><?= e($pageTitle) ?></h1>
+      </div>
       <div class="right">
         <span class="badge <?= e($statusBadge[0]) ?>"><?= e($statusBadge[1]) ?></span>
         <span>👤 <?= e($currentAdmin['username']) ?></span>
